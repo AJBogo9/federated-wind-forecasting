@@ -19,3 +19,5 @@ __pycache__/
 
 # Data (optional, remove if you want to track data)
 data/
+*.bbl
+*.blg
