@@ -22,3 +22,5 @@ __pycache__/
 data/
 *.bbl
 *.blg
+results/
+figures/
