@@ -485,19 +485,31 @@ direction per edge), where each message has size $d = 7$ floats.
 #| label: algo-pseudocode
 #| echo: true
 #| code-fold: false
-# FedGD core loop — shown here for transparency (actual implementation: src/fedgd.py)
+#| eval: false
 
-# def run_fedgd(datasets, graph, config, init_w):
-#     weights = {node: w.copy() for node, w in init_w.items()}
-#     for t in range(config.n_iters):
-#         new_weights = {}
-#         for node i in all_nodes:                        # synchronous: read old weights
-#             grad = (2/n_i) * X_i.T @ (X_i @ w_i - y_i)  # local gradient
-#             penalty = 2*alpha * sum(A[i,j] * (w_i - w_j)  # graph penalty gradient
-#                                    for j in neighbours(i))
-#             new_weights[i] = w_i - lr * (grad + penalty)
-#         weights = new_weights                           # simultaneous update
-#     return weights
+def run_fedgd(datasets, graph, config, init_w):
+    weights = {node: w.copy() for node, w in init_w.items()}
+
+    for it in range(config.n_iters):
+        new_weights = {}
+        for node in node_order:
+            X, y, w = datasets[node]["X_train"], datasets[node]["y_train"], weights[node]
+
+            # Local MSE gradient: (2/n) Xᵀ(Xw − y)
+            grad_local = (2.0 / len(y)) * (X.T @ (X @ w - y))
+
+            # Graph penalty gradient: 2α Σ_{j∈N(i)} A_ij (w_i − w_j)
+            grad_penalty = 2.0 * config.alpha * sum(
+                graph.adjacency[i, j] * (w - weights[node_j])
+                for j, node_j in enumerate(node_order)
+                if graph.adjacency[i, j] > 0
+            )
+
+            new_weights[node] = w - config.lr * (grad_local + grad_penalty)
+
+        weights = new_weights  # synchronous: all nodes update simultaneously
+
+    return weights
 ```
 
 ---
@@ -606,11 +618,6 @@ if results_available:
     iters = np.arange(1, len(geo_r["val_loss"]) + 1)
     fig = go.Figure()
 
-    colours = {
-        "Baseline (α=0)": "grey",
-        f"System 1 — Geographic (α={float(geo_r['alpha']):.2f})": "steelblue",
-        f"System 2 — Correlation (α={float(corr_r['alpha']):.2f})": "darkorange",
-    }
     for label, arr, colour in [
         ("Baseline (α=0)", base_r["val_loss"], "grey"),
         (f"System 1 — Geographic (α={float(geo_r['alpha']):.2f})", geo_r["val_loss"], "steelblue"),
@@ -681,12 +688,6 @@ if results_available:
     node_df = pd.DataFrame(rows).set_index("Station")
 ```
 
-::: {.panel-tabset}
-
-#### Validation loss vs. iterations
-
-*See Figure 6 above.*
-
 #### Per-node test MSE (box plot)
 
 ```{python}
@@ -709,8 +710,6 @@ if results_available and len(rows) > 0:
     )
     show(fig)
 ```
-
-:::
 
 ### 4.4  Summary Table
 
