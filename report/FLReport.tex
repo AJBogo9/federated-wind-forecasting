@@ -168,10 +168,51 @@ Message passing
 \section{Numerical Experiments}
 \label{sec:experiments}
 
+Data source
 
+\begin{itemize}
+	\item FMI Open Data, hourly observations throughout 2024
+	\item ~50 stations retained after applying the 80\% completeness filter
+	\item Variables fetched: wind speed, temperature, relative humidity and atmospheric pressure
+\end{itemize}
+
+Train/val/test split
+
+\begin{itemize}
+	\item Chronological split. 70\% train, 15\% validation, 15\% test
+	\item Temporal order must be preserved to avoid leakage (future data must never inform past predictions)
+\end{itemize}
+
+Hyperparameter selection
+
+\begin{itemize}
+	\item Regularization strength $\alpha$ selected via grid search over $[0.0, 0.01, 0.1, 0.5, 2.0, 5.0]$
+	\item Each candidate $\alpha$ is evaluated by running FedGD for a fixed number of iterations and measuring mean validation MSE across all stations
+	\item Best $\alpha$ is selected separately for each system
+\end{itemize}
+
+Baseline
+
+\begin{itemize}
+	\item $\alpha = 0$: Each station trains independently with no collaboration
+	\item All systems are compared against this to verify that federation learning helps
+\end{itemize}
+
+Full runs
+
+\begin{itemize}
+	\item Best $\alpha$ for each system used for 750-iteration FedGD run
+	\item REPORT TRAINING, VALIDATION AND TEST MSE USING A TABLE FROM QUARTO!! MAYBE SAVE THE DATA SOMEWHERE AND THEN USE IT TO CREATE A TABLE IN LATEX?
+\end{itemize}
+
+Figures. Add figures next!!
+
+After figures, compare systems!!
 
 \section{Conclusion}
 \label{sec:conclusion}
+
+WRITE THIS WHEN ALL OTHER PARTS OF THE REPORT ARE LOOKING GOOD!!
 
 \bibliographystyle{plain}
 \bibliography{references}
