@@ -300,8 +300,7 @@ graph_summary(stations, corr_graph)
 
 station_names = list(stations.index)
 
-def _edge_trace(graph: GraphData, colour: str, name: str) -> go.Scattermapbox:
-    """Single trace for all edges — fast because it's one WebGL object."""
+def _edge_trace(graph: GraphData, colour: str, name: str, visible: bool) -> go.Scattermapbox:
     lats, lons = [], []
     for i, j in graph.edge_index:
         lats += [stations.loc[station_names[i], "lat"],
@@ -316,9 +315,10 @@ def _edge_trace(graph: GraphData, colour: str, name: str) -> go.Scattermapbox:
         hoverinfo="skip",
         name=name,
         showlegend=False,
+        visible=visible,
     )
 
-def _node_trace(colour: str, name: str) -> go.Scattermapbox:
+def _node_trace(colour: str, name: str, visible: bool) -> go.Scattermapbox:
     return go.Scattermapbox(
         lat=stations["lat"], lon=stations["lon"],
         mode="markers",
@@ -327,12 +327,13 @@ def _node_trace(colour: str, name: str) -> go.Scattermapbox:
         hovertemplate="<b>%{text}</b><br>%{lat:.4f}°N, %{lon:.4f}°E<extra></extra>",
         name=name,
         showlegend=False,
+        visible=visible,
     )
 
-geo_edges_trace  = _edge_trace(geo_graph,  "steelblue",  "Geo edges")
-geo_nodes_trace  = _node_trace("steelblue",  "Geo nodes")
-corr_edges_trace = _edge_trace(corr_graph, "darkorange", "Corr edges")
-corr_nodes_trace = _node_trace("darkorange", "Corr nodes")
+geo_edges_trace  = _edge_trace(geo_graph,  "steelblue",  "Geo edges",  visible=True)
+geo_nodes_trace  = _node_trace("steelblue",  "Geo nodes",               visible=True)
+corr_edges_trace = _edge_trace(corr_graph, "darkorange", "Corr edges", visible=False)
+corr_nodes_trace = _node_trace("darkorange", "Corr nodes",              visible=False)
 
 fig = go.Figure(data=[
     geo_edges_trace, geo_nodes_trace,    # indices 0, 1
@@ -359,7 +360,8 @@ fig.update_layout(
                 args=[{"visible": [False, False, True, True]}],
             ),
         ],
-        bgcolor="white", bordercolor="grey", font=dict(size=12),
+        bordercolor="grey",
+        font=dict(size=12),
         active=0,
     )],
 )
