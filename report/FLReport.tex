@@ -30,19 +30,150 @@
 
 \section{Introduction}
 
+Motivation for the application
+
+\begin{itemize}
+	\item Wind speed forecasting is valuable for grid operators managing Finland's growing wind energy capacity
+	\item FMI operates a dense network of stations across Finland. Collaboration between them would improve forecasting, especially for sparse regions
+	\item Raw station data my be commercially sensitive or subject to data-residency constraints, ruling out centralised training
+\end{itemize}
+
+Why FL is the right tool?
+
+\begin{itemize}
+	\item Federated learning enables collaboration without sharing raw data. This is made possible with only sharing the model parameters of the local model.
+	\item Graph-regularised FL (GTVMin) is well-suited here because stations have a natural network structure: nearby or meteorologically similar stations should learn similar models
+	\item \cite{SarcheshmehPour2023, McMahan2017}
+\end{itemize}
+
+Learning objective
+
+\begin{itemize}
+	\item Each station trains a local linear model to predict next-hour wind speed from its own observations
+	\item The FL graph encodes which stations should influence each other during training
+	\item The key design question: does the choice of graph topology (geographic vs. correlation-based) meaningfully affect forecasting accuracy?
+\end{itemize}
+
 \section{Problem Formulation}
 \label{sec:pf}
+
+Nodes and station selection
+
+\begin{itemize}
+	\item Each node is one FMI weather station
+	\item Stations with less than 80\% hourly completeness over 2024 are excluded. Excluding these stations is justified because after filtering, there is still about 50 stations left. The station distribution is also well divided geographically all over finland (reference picture).
+\end{itemize}
+
+Features and labels
+
+\begin{itemize}
+	\item Label: next-hour wind speed at station $i$. Knowing the wind speed in the future is useful for Finnish electricity companies.
+	\item Features: lagged wind speeds at $t - 1, t - 2, t - 3$. The wind speed tends to be similar to the previous hours.
+	\item Other features are lagged pressure, temperature and humidity. All are lagged $t - 1$. These features can predict future wind speed. ANY CITATIONS FOR THIS?? THERE HAS TO BE SOME LITERATURE ABOUT THIS!!
+	\item Both features and labels are z-score normalized ($\mu = 0, \sigma = 1$) using training-set statistics only.
+	\item Without normalizing, the bias term encodes stations mean wind speed, inflating the GTV penalty between meteorologically similar stations. CITATION OR PROOF???!!!
+\end{itemize}
+
+Local model
+
+$$
+	\hat{y}^{(i)} = (\mathbf{w}^{(i)})^\top \mathbf{x}
+$$
+
+\begin{itemize}
+	\item Linear regression with a bias column appended to the feature vector. This is a simple baseline for a convex interpretable model on tabular weather data.
+\end{itemize}
+
+Local loss function
+
+\begin{itemize}
+	\item Mean squared error (MSE). This is standard for regression. Is always positive and penalizes large errors
+\end{itemize}
+
+Edges and edge weights (two systems)
+
+\begin{itemize}
+	\item \textbf{System 1: Geographic}. Connect each station to its $k = 5$ geographically nearest neighbours (haversine distance that takes into account global curving). Edge weights:
+
+	      $$A_{ij} = \exp \left( \frac{-d_{ij}^2}{\sigma^2} \right) $$
+
+	      with $\sigma$ being the median squared pairwise distance.
+	\item \textbf{System 2: Correlation}. Connect each station to its $k = 5$ most correlated neighbours (Pearson correlation on 2024 wind speed series); edge weights = raw correlation value. The correlation captures the meteorological similarity beyond proximity alone.
+	\item $k = 5$ is a more or less arbitrary choice that balances the tradeoff of connectivity and over-smoothing.
+\end{itemize}
+
 
 \section{Methodology}
 \label{sec:meth}
 
+Variation measure
+
+\begin{itemize}
+	\item The GTV penalty uses the squared $\ell2$ norm
+
+	      $$
+		      |\mathbf{w}^{(i)} - \mathbf{w}^{(j)}|^2
+	      $$
+
+	      to measure disagreement between neighboring stations' parameters
+	\item Natural choice for linear models since parameters live in $\mathbb{R}^d$, convex, and differentiable. This makes the overall objective tractable. EXPLAIN THIS MORE OR FIND CITATION!!
+\end{itemize}
+
+GTVMin Objective
+
+\begin{itemize}
+	\item Write out the full problem:
+
+	      $$
+		      \min_{\mathbf{w}^{(1)},\dots,\mathbf{w}^{(n)}} \sum_{i=1}^{n} L_i(\mathbf{w}^{(i)}) + \alpha \sum_{{i,j} \in \mathcal{E}} A_{ij} |\mathbf{w}^{(i)} - \mathbf{w}^{(j)}|^2
+	      $$
+
+	\item Explain the parameters: $\alpha$ is the collaboration strength. If $\alpha = 0$ there is no penalty for differing models. If $\alpha = \infty$, all stations will share their model.
+\end{itemize}
+
+FL algorithm
+
+\begin{itemize}
+	\item GTVMin solved with synchronous federated gradient decent (FedGD)
+	\item Derived from the fixed-point equation by iterating the block-wise minimization operator $\mathcal{F}^{(i)}$
+	\item WRITE THIS SECTION OUT MORE IF YOU HAVE ROOM IN THE FIVE PAGE LIMIT!!
+\end{itemize}
+
+Update rule
+
+\begin{itemize}
+	\item Write the per-iteration update:
+
+	      \begin{equation*}
+		      \begin{split}
+			      \mathbf{w}^{(i,t+1)} = \mathbf{w}^{(i,t)} - \eta \Bigl[ \nabla L_i(\mathbf{w}^{(i,t)}) \\
+				      + 2\alpha \sum_{j \in \mathcal{N}(i)} A_{ij}\left(\mathbf{w}^{(i,t)} - \mathbf{w}^{(j,t)}\right) \Bigr]
+		      \end{split}
+	      \end{equation*}
+
+	\item First term: gradient of local MSE. This pulls the model toward fitting the station's own data
+	\item Second term: weighted disagreement with neighbors. This pulls the model toward agreement with similar stations
+\end{itemize}
+
+Message passing
+
+\begin{itemize}
+	\item Each iteration: node $i$ broadcasts $\mathbf{w}^{(i, t)}$ to all its neighbors and receives $\mathbf{w}^{(j, t)}$ from each neighbor $j \in \mathcal{N}(i)$
+	\item All nodes update simultaneously using the same snapshot of weights (synchronous)
+	\item Raw data $\mathcal{D}^{(i)}$ never leaves the node $i$. Only model parameters are communicated.
+	\item Communication cost $2|\mathcal{E}|$ messages per station
+\end{itemize}
+
+
 \section{Numerical Experiments}
 \label{sec:experiments}
+
+
 
 \section{Conclusion}
 \label{sec:conclusion}
 
-% \bibliographystyle{plain}
-% \bibliography{references}
+\bibliographystyle{plain}
+\bibliography{references}
 
 \end{document}
