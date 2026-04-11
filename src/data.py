@@ -67,10 +67,10 @@ class NodeDataset(TypedDict):
 
     Feature matrix X has shape (n, 7):
         columns 0-2: ws_{t-3}, ws_{t-2}, ws_{t-1}  (lagged wind speed)
-        column  3:   ta_t   (temperature at time t)
-        column  4:   rh_t   (relative humidity at time t)
-        column  5:   pa_t   (atmospheric pressure at time t)
-        column  6:   1.0    (bias term)
+        column  3:   ta_{t-1}  (temperature one hour prior)
+        column  4:   rh_{t-1}  (relative humidity one hour prior)
+        column  5:   pa_{t-1}  (atmospheric pressure one hour prior)
+        column  6:   1.0       (bias term)
     Label vector y has shape (n,): ws_{t+1}, z-score normalised.
 
     Both features and labels are z-score normalised using training-set
@@ -377,6 +377,9 @@ def build_node_datasets(
         # Build lag features
         for lag in range(1, LAG + 1):
             sdf[f"ws_lag{lag}"] = sdf["ws"].shift(lag)
+        sdf["ta_lag1"] = sdf["ta"].shift(1)
+        sdf["rh_lag1"] = sdf["rh"].shift(1)
+        sdf["pa_lag1"] = sdf["pa"].shift(1)
 
         # Label: next-hour wind speed
         sdf["ws_next"] = sdf["ws"].shift(-1)
@@ -388,8 +391,8 @@ def build_node_datasets(
             # Not enough data after cleaning — skip this station
             continue
 
-        # Feature matrix: [ws_{t-3}, ws_{t-2}, ws_{t-1}, ta, rh, pa]
-        feature_cols = ["ws_lag3", "ws_lag2", "ws_lag1", "ta", "rh", "pa"]
+        # Feature matrix: [ws_{t-3}, ws_{t-2}, ws_{t-1}, ta_{t-1}, rh_{t-1}, pa_{t-1}]
+        feature_cols = ["ws_lag3", "ws_lag2", "ws_lag1", "ta_lag1", "rh_lag1", "pa_lag1"]
         X_raw = sdf[feature_cols].to_numpy(dtype=np.float64)
         y = sdf["ws_next"].to_numpy(dtype=np.float64)
 
