@@ -11,7 +11,7 @@ format:
     toc-depth: 3
     toc-title: "Contents"
     embed-resources: true
-    theme: flatly
+    theme: darkly
     fig-width: 9
     fig-height: 5
     html-math-method: katex
