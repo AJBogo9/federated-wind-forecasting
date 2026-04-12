@@ -9,6 +9,7 @@
 \usepackage{listings}
 
 \input{ml_macros.tex}
+\graphicspath{{../figures/}}
 
 \title{Federated Wind Speed Forecasting over Finland}
 \name{No Name (to make peer grading double-blind!)}
@@ -102,6 +103,28 @@ Edges and edge weights (two systems)
 	\item $k = 5$ is a more or less arbitrary choice that balances the tradeoff of connectivity and over-smoothing.
 \end{itemize}
 
+\begin{figure*}[t]
+	\centering
+	\begin{subfigure}[t]{0.48\textwidth}
+		\includegraphics[width=\textwidth]{topology_geo.pdf}
+		\caption{System 1 — Geographic k-NN}
+	\end{subfigure}
+	\hfill
+	\begin{subfigure}[t]{0.48\textwidth}
+		\includegraphics[width=\textwidth]{topology_corr.pdf}
+		\caption{System 2 — Correlation k-NN}
+	\end{subfigure}
+	\caption{FL network topology over Finland. Edges connect each station to its $k=5$ nearest neighbours; edge colour indicates the system. Edge width is proportional to $A_{ij}$.}
+	\label{fig:topology}
+\end{figure*}
+
+\begin{figure}[t]
+	\centering
+	\includegraphics[width=\columnwidth]{edge_weights.pdf}
+	\caption{Distribution of edge weights $A_{ij}$ for System 1 (geographic, left) and System 2 (correlation, right).}
+	\label{fig:edge-weights}
+\end{figure}
+
 
 \section{Methodology}
 \label{sec:meth}
@@ -191,6 +214,13 @@ Hyperparameter selection
 	\item Best $\alpha$ is selected separately for each system
 \end{itemize}
 
+\begin{figure}[t]
+	\centering
+	\includegraphics[width=\columnwidth]{alpha_sweep.pdf}
+	\caption{Mean validation MSE vs.\ regularisation strength $\alpha$ for both systems. Dashed lines mark the selected $\alpha^*$.}
+	\label{fig:alpha-sweep}
+\end{figure}
+
 Baseline
 
 \begin{itemize}
@@ -205,9 +235,28 @@ Full runs
 	\item REPORT TRAINING, VALIDATION AND TEST MSE USING A TABLE FROM QUARTO!! MAYBE SAVE THE DATA SOMEWHERE AND THEN USE IT TO CREATE A TABLE IN LATEX?
 \end{itemize}
 
-Figures. Add figures next!!
+\begin{figure}[t]
+	\centering
+	\includegraphics[width=\columnwidth]{convergence.pdf}
+	\caption{Validation loss vs.\ iteration for both systems at their selected $\alpha^*$, compared to the baseline ($\alpha=0$). Dotted lines mark the final test RMSE.}
+	\label{fig:convergence}
+\end{figure}
 
-After figures, compare systems!!
+\begin{figure}[t]
+	\centering
+	\includegraphics[width=\columnwidth]{node_boxplot.pdf}
+	\caption{Distribution of per-node test MSE (normalised) across all stations for the baseline, System 1, and System 2.}
+	\label{fig:node-boxplot}
+\end{figure}
+
+\begin{figure}[t]
+	\centering
+	\includegraphics[width=\columnwidth]{pred_vs_actual.pdf}
+	\caption{Predicted vs.\ actual next-hour wind speed on the test set for System 1. Points near the diagonal indicate accurate predictions.}
+	\label{fig:pred-vs-actual}
+\end{figure}
+
+Comparison between systems
 
 \section{Conclusion}
 \label{sec:conclusion}

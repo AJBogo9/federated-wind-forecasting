@@ -40,8 +40,13 @@ import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
 
-def show(fig):
-    fig.show()
+_figures_dir = _repo_root / "figures"
+_figures_dir.mkdir(exist_ok=True)
+
+def show(fig, save_as: str | None = None):
+    fig.show(config={"responsive": True})
+    if save_as:
+        fig.write_image(str(_figures_dir / save_as))
 ```
 
 ## 1  Introduction
@@ -366,6 +371,20 @@ fig.update_layout(
     )],
 )
 show(fig)
+
+# Export static versions for LaTeX (one per system)
+_map_layout = dict(
+    mapbox=dict(style="carto-positron", center=dict(lat=65.5, lon=25), zoom=3.8),
+    height=580, width=420, margin=dict(t=10, b=10, l=10, r=10),
+)
+_geo_fig = go.Figure(data=[geo_edges_trace, geo_nodes_trace])
+_geo_fig.update_layout(**_map_layout)
+_geo_fig.write_image(str(_figures_dir / "topology_geo.pdf"))
+
+_corr_fig = go.Figure(data=[corr_edges_trace, corr_nodes_trace])
+_corr_fig.update_traces(visible=True)
+_corr_fig.update_layout(**_map_layout)
+_corr_fig.write_image(str(_figures_dir / "topology_corr.pdf"))
 ```
 
 **System 1 — Geographic k-NN.**
@@ -414,7 +433,7 @@ fig.update_layout(
     margin=dict(t=50, b=40),
     title_text="Figure 4: Distribution of edge weights for both graph systems.",
 )
-show(fig)
+show(fig, save_as="edge_weights.pdf")
 ```
 
 ---
@@ -567,7 +586,7 @@ if sweep_available:
         legend=dict(orientation="h", y=-0.25),
         margin=dict(t=30, b=80),
     )
-    show(fig)
+    show(fig, save_as="alpha_sweep.pdf")
 else:
     print("Plot will appear after running src/run_experiments.py")
 ```
@@ -652,7 +671,7 @@ if results_available:
         legend=dict(orientation="h", y=-0.25),
         margin=dict(t=20, b=80),
     )
-    show(fig)
+    show(fig, save_as="convergence.pdf")
 ```
 
 ### 4.3  Per-Node Results
@@ -708,7 +727,7 @@ if results_available and len(rows) > 0:
         height=380,
         margin=dict(t=50, b=30),
     )
-    show(fig)
+    show(fig, save_as="node_boxplot.pdf")
 ```
 
 ### 4.4  Summary Table
@@ -810,7 +829,7 @@ if results_available and len(rows) > 0:
         title_text="Figure 8: Actual vs. predicted wind speed — System 1 (Geographic).",
         margin=dict(t=80, b=30),
     )
-    show(fig)
+    show(fig, save_as="pred_vs_actual.pdf")
 ```
 
 ---
