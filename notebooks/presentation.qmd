@@ -1,0 +1,593 @@
+---
+title: "Federated Wind Speed Forecasting over Finland"
+subtitle: "CS-E4740 Federated Learning · Aalto University · Spring 2026"
+author: ""
+date: today
+format:
+  revealjs:
+    theme: [default, presentation.scss]
+    slide-number: c/t
+    progress: true
+    footer: "CS-E4740 Federated Learning · Aalto University · Spring 2026"
+    transition: slide
+    background-transition: fade
+    embed-resources: true
+    width: 1280
+    height: 720
+html-math-method: katex
+bibliography: ../report/references.bib
+execute:
+  echo: false
+  warning: false
+jupyter: python3
+---
+
+```{python}
+#| label: setup
+#| include: false
+import sys
+from pathlib import Path
+
+_repo_root = Path("..").resolve()
+sys.path.insert(0, str(_repo_root / "src"))
+
+import numpy as np
+import pandas as pd
+import plotly.graph_objects as go
+import plotly.express as px
+from plotly.subplots import make_subplots
+
+def show(fig):
+    fig.show(config={"responsive": True})
+```
+
+```{python}
+#| label: load-data
+#| include: false
+#| cache: true
+from data import fetch_wind_data, get_station_index, build_node_datasets, init_weights, MIN_COMPLETENESS, TRAIN_FRAC, VAL_FRAC
+
+df = fetch_wind_data(cache_path=Path("../data/wind_2024.csv"))
+stations = get_station_index(df)
+datasets = build_node_datasets(df, stations)
+init_w = init_weights(datasets)
+```
+
+```{python}
+#| label: load-graphs
+#| include: false
+from graph import geographic_graph, correlation_graph, GraphData
+
+geo_graph  = geographic_graph(stations, k=5)
+corr_graph = correlation_graph(df, stations, k=5)
+station_names = list(stations.index)
+```
+
+```{python}
+#| label: load-results
+#| include: false
+results_dir = Path("../results")
+results_available = (results_dir / "geo.npz").exists()
+sweep_path = Path("../results/alpha_sweep.npz")
+sweep_available = sweep_path.exists()
+
+if results_available:
+    geo_r  = np.load(results_dir / "geo.npz",      allow_pickle=True)
+    corr_r = np.load(results_dir / "corr.npz",     allow_pickle=True)
+    base_r = np.load(results_dir / "baseline.npz", allow_pickle=True)
+    mean_y_std = float(np.mean([datasets[s]["y_std"] for s in datasets]))
+
+if sweep_available:
+    sweep = np.load(sweep_path)
+    alpha_grid       = sweep["alpha_grid"]
+    geo_val          = sweep["geo_val_loss"]
+    corr_val         = sweep["corr_val_loss"]
+    geo_best_alpha   = float(sweep["geo_best_alpha"])
+    corr_best_alpha  = float(sweep["corr_best_alpha"])
+```
+
+---
+
+## Why Wind Forecasting in Finland? {background-color="#0d1b2a"}
+
+::: {.incremental}
+- 🌬️ **Finland's wind capacity exceeded 7 GW in 2024** — grid operators need accurate short-horizon forecasts to balance supply and demand
+- 🗺️ **FMI operates ~50 weather stations** distributed across Finland, each collecting hourly wind speed, temperature, humidity, and pressure
+- 🔒 **Station data can be commercially sensitive** — a centralised model that pools raw data is not always feasible
+- 🤝 **Solution:** Federated Learning — stations collaborate by sharing *model parameters*, never raw observations
+:::
+
+::: notes
+Open with the real-world motivation. Emphasise that Finland's grid depends on wind, and the data is there — the challenge is privacy. FL is the natural answer.
+:::
+
+---
+
+## The FMI Station Network
+
+```{python}
+#| label: station-map-slide
+n_stations = len(stations)
+fig = go.Figure(go.Scattermapbox(
+    lat=stations["lat"], lon=stations["lon"],
+    mode="markers",
+    marker=dict(size=10, color="#4a9edd", opacity=0.9),
+    text=stations.index,
+    hovertemplate="<b>%{text}</b><br>%{lat:.4f}°N, %{lon:.4f}°E<extra></extra>",
+))
+fig.update_layout(
+    mapbox=dict(style="carto-darkmatter", center=dict(lat=64.85, lon=25.3), zoom=3.8),
+    height=480,
+    margin=dict(t=0, b=0, l=0, r=0),
+    showlegend=False,
+    paper_bgcolor="rgba(0,0,0,0)",
+)
+show(fig)
+```
+
+::: {style="font-size:0.75em; margin-top:0.3em;"}
+**`r py$n_stations`** stations · hourly observations · full year 2024 · variables: *ws, ta, rh, pa*
+:::
+
+::: notes
+The interactive map lets you hover over individual stations. Point out the geographic spread — from Helsinki to Lapland. The density is higher in the south.
+:::
+
+---
+
+## Local Learning Task {auto-animate=true}
+
+Each station $i$ trains its **own** linear model:
+
+$$\hat{y}^{(i)} = \bigl(\mathbf{w}^{(i)}\bigr)^\top \mathbf{x}$$
+
+- **Label** $y = ws_{t+1}$: next-hour wind speed
+- **Features** $\mathbf{x} \in \mathbb{R}^7$: six meteorological inputs + bias
+
+::: notes
+Introduce the per-node model before showing the full feature table on the next slide.
+:::
+
+---
+
+## Local Learning Task {auto-animate=true}
+
+Each station $i$ trains its **own** linear model:
+
+$$\hat{y}^{(i)} = \bigl(\mathbf{w}^{(i)}\bigr)^\top \mathbf{x}$$
+
+| # | Feature | Notation | Why |
+|---|---------|----------|-----|
+| 1–3 | Lagged wind speeds | $ws_{t-1}, ws_{t-2}, ws_{t-3}$ | Wind persists hour-to-hour |
+| 4 | Temperature (lagged) | $ta_{t-1}$ | Thermal gradients drive wind |
+| 5 | Relative humidity (lagged) | $rh_{t-1}$ | Proxy for weather systems |
+| 6 | Pressure (lagged) | $pa_{t-1}$ | Pressure gradient → wind |
+| 7 | Bias | $1$ | Station mean offset |
+
+All features **and** labels are z-score normalised using training-set statistics only.
+
+::: notes
+The auto-animate smoothly adds the table. Emphasise that ALL features are lagged — no future information leaks into the input. The normalisation of labels is non-obvious; explain why on a question.
+:::
+
+---
+
+## FL Network Design: Two Systems {background-color="#0a1628"}
+
+::: {.columns}
+::: {.column width="50%"}
+**System 1 — Geographic k-NN**
+
+Connect each station to its $k=5$ nearest neighbours (haversine distance):
+
+$$A_{ij}^{\text{geo}} = \exp\!\left(-\frac{d_{ij}^2}{\sigma^2}\right)$$
+
+$\sigma^2$ = median pairwise squared distance
+
+*Assumption: nearby stations share similar weather*
+:::
+::: {.column width="50%"}
+**System 2 — Correlation k-NN**
+
+Connect each station to its $k=5$ most correlated neighbours (Pearson on 2024 training wind speeds):
+
+$$A_{ij}^{\text{corr}} = \max\!\left(0,\;\operatorname{corr}(ws_i, ws_j)\right)$$
+
+*Captures meteorological similarity beyond proximity*
+:::
+:::
+
+::: notes
+Key design question of the project. The geographic graph is the intuitive baseline. The correlation graph is the novel contribution — it can link stations that are far apart but experience similar weather patterns (e.g. both coastal).
+:::
+
+---
+
+## FL Network Topology
+
+```{python}
+#| label: topology-slide
+def _edge_trace(graph, colour, name, visible):
+    lats, lons = [], []
+    for i, j in graph.edge_index:
+        lats += [stations.loc[station_names[i], "lat"],
+                 stations.loc[station_names[j], "lat"], None]
+        lons += [stations.loc[station_names[i], "lon"],
+                 stations.loc[station_names[j], "lon"], None]
+    return go.Scattermapbox(
+        lat=lats, lon=lons, mode="lines",
+        line=dict(width=2, color=colour), opacity=0.6,
+        hoverinfo="skip", name=name, showlegend=False, visible=visible,
+    )
+
+def _node_trace(colour, name, visible):
+    return go.Scattermapbox(
+        lat=stations["lat"], lon=stations["lon"], mode="markers",
+        marker=dict(size=8, color=colour, opacity=0.95),
+        text=stations.index,
+        hovertemplate="<b>%{text}</b><extra></extra>",
+        name=name, showlegend=False, visible=visible,
+    )
+
+fig = go.Figure(data=[
+    _edge_trace(geo_graph,  "#4a9edd",  "Geo edges",  True),
+    _node_trace("#4a9edd",  "Geo nodes",               True),
+    _edge_trace(corr_graph, "#f97316",  "Corr edges", False),
+    _node_trace("#f97316",  "Corr nodes",              False),
+])
+fig.update_layout(
+    mapbox=dict(style="carto-darkmatter", center=dict(lat=64.85, lon=25.3), zoom=3.8),
+    height=480,
+    margin=dict(t=35, b=5, l=5, r=5),
+    paper_bgcolor="rgba(0,0,0,0)",
+    updatemenus=[dict(
+        type="buttons", direction="right",
+        x=0.5, xanchor="center", y=1.06, yanchor="bottom",
+        buttons=[
+            dict(label="System 1 — Geographic",  method="update",
+                 args=[{"visible": [True,  True,  False, False]}]),
+            dict(label="System 2 — Correlation", method="update",
+                 args=[{"visible": [False, False, True,  True ]}]),
+        ],
+        bgcolor="#1a3a5c", bordercolor="#4a9edd",
+        font=dict(size=13, color="white"), active=0,
+    )],
+)
+show(fig)
+```
+
+::: notes
+Toggle between the two systems live. Point out that the correlation graph creates some surprising long-range links between e.g. western coast and eastern lake-district stations that share similar maritime influence.
+:::
+
+---
+
+## The GTVMin Objective
+
+$$
+\min_{\{\mathbf{w}^{(i)}\}_{i=1}^n}
+\underbrace{\sum_{i=1}^{n} L_i\!\left(\mathbf{w}^{(i)}\right)}_{\text{local fit}}
+\;+\;
+\alpha \underbrace{\sum_{\{i,j\}\in\mathcal{E}} A_{ij}\,\bigl\|\mathbf{w}^{(i)} - \mathbf{w}^{(j)}\bigr\|^2}_{\text{graph total variation}}
+$$
+
+::: {.fragment}
+| $\alpha$ | Behaviour |
+|----------|-----------|
+| $0$ | Stations learn **independently** — pure local models |
+| $\to\infty$ | All stations converge to a **single shared model** |
+| intermediate | **Personalised** — local fit balanced against neighbour agreement |
+:::
+
+::: {.fragment}
+::: {.callout-note}
+**Variation measure**: squared $\ell_2$ norm — convex and differentiable, making the full objective tractable for gradient-based optimisation.
+:::
+:::
+
+::: notes
+Build up the equation in two fragments. The table makes the role of alpha very clear. The callout justifies the choice of squared L2 norm over e.g. L1.
+:::
+
+---
+
+## FedGD: The Algorithm
+
+**Synchronous Federated Gradient Descent** — each iteration, every node $i$ computes:
+
+$$\mathbf{w}^{(i,t+1)} = \mathbf{w}^{(i,t)} - \eta \Bigl[
+  \underbrace{\nabla L_i\!\left(\mathbf{w}^{(i,t)}\right)}_{\text{local gradient}}
+  + 2\alpha \!\!\sum_{j\in\mathcal{N}(i)} \!\! A_{ij}\underbrace{\left(\mathbf{w}^{(i,t)} - \mathbf{w}^{(j,t)}\right)}_{\text{pull toward neighbour}}
+\Bigr]$$
+
+```python
+# For each node i at iteration t:
+grad_local   = (2/n_i) * X_i.T @ (X_i @ w_i - y_i)        # ← local MSE gradient
+grad_penalty = 2 * alpha * sum(A[i,j] * (w_i - w_j)        # ← graph penalty
+                               for j in neighbours[i])
+w_i_new      = w_i - lr * (grad_local + grad_penalty)       # ← simultaneous update
+```
+
+::: {.fragment}
+- 📡 **Communication per iteration:** $2|\mathcal{E}|$ messages (each edge, both directions)
+- 🔒 **Raw data $\mathcal{D}^{(i)}$ never leaves node $i$**
+:::
+
+::: notes
+The code block maps directly to the math. Stress that all nodes read current weights and update simultaneously — no sequential passing, no averaging. The privacy guarantee is immediate: only w vectors travel over edges.
+:::
+
+---
+
+## Hyperparameter Tuning: Selecting $\alpha$
+
+```{python}
+#| label: alpha-sweep-slide
+if sweep_available:
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=alpha_grid, y=geo_val, mode="lines+markers",
+        name="System 1 — Geographic",
+        line=dict(color="#4a9edd", width=2.5), marker=dict(size=8),
+    ))
+    fig.add_trace(go.Scatter(
+        x=alpha_grid, y=corr_val, mode="lines+markers",
+        name="System 2 — Correlation",
+        line=dict(color="#f97316", width=2.5), marker=dict(size=8),
+    ))
+    fig.add_vline(x=geo_best_alpha,  line=dict(color="#4a9edd", dash="dash", width=1.5),
+                  annotation_text=f"α*={geo_best_alpha}",  annotation_font_color="#4a9edd")
+    fig.add_vline(x=corr_best_alpha, line=dict(color="#f97316", dash="dash", width=1.5),
+                  annotation_text=f"α*={corr_best_alpha}", annotation_font_color="#f97316",
+                  annotation_position="top left")
+    fig.update_xaxes(title_text="α", type="log", color="#e8edf2", gridcolor="#1e3a5f")
+    fig.update_yaxes(title_text="Mean validation MSE", color="#e8edf2", gridcolor="#1e3a5f")
+    fig.update_layout(
+        height=390, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="#111e2d",
+        font_color="#e8edf2",
+        legend=dict(orientation="h", y=-0.22, font_color="#e8edf2"),
+        margin=dict(t=10, b=70, l=10, r=10),
+    )
+    show(fig)
+else:
+    print("Run src/run_experiments.py to generate results.")
+```
+
+::: {.fragment}
+::: {.callout-tip}
+Both systems select **$\alpha^* = 0.1$** — moderate regularisation balances local fit and collaboration.
+:::
+:::
+
+::: notes
+The log x-axis is important: alpha=0 is local-only. The sweet spot is at 0.1 for both systems. At large alpha, models over-smooth and validation loss rises again.
+:::
+
+---
+
+## Convergence
+
+::: {.columns}
+::: {.column width="65%"}
+```{python}
+#| label: convergence-slide
+if results_available:
+    iters = np.arange(1, len(geo_r["val_loss"]) + 1)
+    fig = go.Figure()
+    for label, arr, colour in [
+        ("Baseline (α=0)",  base_r["val_loss"],  "#888"),
+        (f"System 1 — Geo (α={float(geo_r['alpha']):.2f})",  geo_r["val_loss"],  "#4a9edd"),
+        (f"System 2 — Corr (α={float(corr_r['alpha']):.2f})", corr_r["val_loss"], "#f97316"),
+    ]:
+        fig.add_trace(go.Scatter(x=iters, y=arr, mode="lines", name=label,
+                                 line=dict(color=colour, width=2)))
+    for r, colour in [(base_r, "#888"), (geo_r, "#4a9edd"), (corr_r, "#f97316")]:
+        rmse = float(np.sqrt(float(r["test_loss"]) * mean_y_std**2))
+        fig.add_hline(y=float(r["test_loss"]),
+                      line=dict(color=colour, dash="dot", width=1),
+                      annotation_text=f"{rmse:.3f} m/s",
+                      annotation_font_color=colour, annotation_position="right")
+    fig.update_xaxes(title_text="Iteration", color="#e8edf2", gridcolor="#1e3a5f")
+    fig.update_yaxes(title_text="Val MSE", color="#e8edf2", gridcolor="#1e3a5f")
+    fig.update_layout(
+        height=400, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="#111e2d",
+        font_color="#e8edf2",
+        legend=dict(orientation="h", y=-0.28, font_size=12),
+        margin=dict(t=5, b=80, l=5, r=90),
+    )
+    show(fig)
+```
+:::
+::: {.column width="35%"}
+
+::: {.fragment}
+✅ Training loss decreases **monotonically** — confirms convex MSE loss
+:::
+
+::: {.fragment}
+✅ FL systems converge **below** the baseline
+:::
+
+::: {.fragment}
+✅ Dotted lines = **test RMSE** in physical units (m/s)
+:::
+
+::: {.fragment}
+::: {.callout-note}
+750 iterations · $\eta=0.01$ · synchronous updates
+:::
+:::
+
+:::
+:::
+
+::: notes
+The dotted horizontal lines show the final test performance in m/s — the unit that matters operationally. Convergence looks fast but the problem is well-conditioned (linear + convex).
+:::
+
+---
+
+## Per-Node Test MSE
+
+```{python}
+#| label: boxplot-slide
+if results_available:
+    from fedgd import _mse
+
+    def _load_weights(r):
+        w = r["weights"]
+        return w.item() if w.ndim == 0 else {}
+
+    geo_w  = _load_weights(geo_r)
+    corr_w = _load_weights(corr_r)
+    base_w = _load_weights(base_r)
+
+    rows = []
+    for node in sorted(datasets.keys()):
+        X_t, y_t = datasets[node]["X_test"], datasets[node]["y_test"]
+        rows.append({
+            "Baseline":        _mse(X_t, y_t, base_w[node]) if node in base_w  else np.nan,
+            "System 1 — Geo":  _mse(X_t, y_t, geo_w[node])  if node in geo_w   else np.nan,
+            "System 2 — Corr": _mse(X_t, y_t, corr_w[node]) if node in corr_w  else np.nan,
+        })
+    ndf = pd.DataFrame(rows)
+
+    fig = go.Figure()
+    for col, colour in [("Baseline","#888"), ("System 1 — Geo","#4a9edd"), ("System 2 — Corr","#f97316")]:
+        fig.add_trace(go.Box(
+            y=ndf[col].dropna(), name=col,
+            marker_color=colour, boxmean=True,
+            line_color=colour,
+        ))
+    fig.update_yaxes(title_text="Test MSE (normalised)", color="#e8edf2", gridcolor="#1e3a5f")
+    fig.update_layout(
+        height=430, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="#111e2d",
+        font_color="#e8edf2", margin=dict(t=10, b=10, l=10, r=10),
+        showlegend=False,
+    )
+    show(fig)
+```
+
+::: notes
+Hover over any box to see quartiles. The spread is large — some stations benefit much more than others. Sparse stations (northern Finland) typically gain the most from federation.
+:::
+
+---
+
+## Prediction Quality
+
+```{python}
+#| label: pred-scatter-slide
+if results_available:
+    sample_nodes = sorted(datasets.keys())[:3]
+    fig = make_subplots(rows=1, cols=len(sample_nodes),
+                        subplot_titles=sample_nodes)
+    for col_idx, node in enumerate(sample_nodes, start=1):
+        X_test = datasets[node]["X_test"]
+        y_test = datasets[node]["y_test"]
+        y_pred = X_test @ geo_w[node]
+        fig.add_trace(go.Scatter(
+            x=y_test, y=y_pred, mode="markers",
+            marker=dict(size=3, color="#4a9edd", opacity=0.5),
+            showlegend=False,
+        ), row=1, col=col_idx)
+        max_val = float(max(y_test.max(), y_pred.max())) * 1.05
+        fig.add_trace(go.Scatter(
+            x=[0, max_val], y=[0, max_val], mode="lines",
+            line=dict(color="#f97316", dash="dash", width=1.5),
+            name="Ideal" if col_idx == 1 else None,
+            showlegend=(col_idx == 1),
+        ), row=1, col=col_idx)
+    fig.update_xaxes(title_text="Actual (norm.)", color="#e8edf2", gridcolor="#1e3a5f")
+    fig.update_yaxes(title_text="Predicted (norm.)", color="#e8edf2", gridcolor="#1e3a5f", col=1)
+    fig.update_layout(
+        height=420, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="#111e2d",
+        font_color="#e8edf2", margin=dict(t=40, b=10, l=10, r=10),
+    )
+    show(fig)
+```
+
+Points clustering near the **orange diagonal** indicate accurate predictions — System 1 (Geographic) shown.
+
+::: notes
+Three representative stations. Good stations cluster tightly on the diagonal. Weaker stations show more scatter, typically at extreme wind speeds where training data is sparse.
+:::
+
+---
+
+## Results Summary {background-color="#0a1628"}
+
+```{python}
+#| label: results-table-slide
+if results_available:
+    def to_rmse(norm_mse):
+        return float(np.sqrt(norm_mse * mean_y_std**2))
+
+    rows = [
+        ("Baseline",        "0.0",
+         f"{float(base_r['train_loss'][-1]):.4f}",
+         f"{float(base_r['val_loss'][-1]):.4f}",
+         f"{float(base_r['test_loss']):.4f}",
+         f"{to_rmse(float(base_r['test_loss'])):.3f}"),
+        ("System 1 — Geographic", f"{float(geo_r['alpha']):.2f}",
+         f"{float(geo_r['train_loss'][-1]):.4f}",
+         f"{float(geo_r['val_loss'][-1]):.4f}",
+         f"{float(geo_r['test_loss']):.4f}",
+         f"{to_rmse(float(geo_r['test_loss'])):.3f}"),
+        ("System 2 — Correlation", f"{float(corr_r['alpha']):.2f}",
+         f"{float(corr_r['train_loss'][-1]):.4f}",
+         f"{float(corr_r['val_loss'][-1]):.4f}",
+         f"{float(corr_r['test_loss']):.4f}",
+         f"{to_rmse(float(corr_r['test_loss'])):.3f}"),
+    ]
+    html = """<table style='font-size:0.8em; width:100%'>
+    <tr><th>System</th><th>α</th><th>Train MSE</th><th>Val MSE</th><th>Test MSE</th><th>Test RMSE (m/s)</th></tr>"""
+    for r in rows:
+        html += f"<tr><td>{r[0]}</td><td>{r[1]}</td><td>{r[2]}</td><td>{r[3]}</td><td>{r[4]}</td><td><b>{r[5]}</b></td></tr>"
+    html += "</table>"
+    from IPython.display import HTML
+    display(HTML(html))
+```
+
+::: {.fragment}
+::: {.callout-tip}
+Both FL systems outperform the no-collaboration baseline · Correlation graph ≥ Geographic graph
+:::
+:::
+
+::: notes
+Read out the test RMSE in m/s — that's the operationally meaningful unit. The improvement is modest (~0.004 m/s) but consistent across all metrics and all stations.
+:::
+
+---
+
+## Conclusion
+
+::: {.incremental}
+- ✅ **Both FL systems beat local-only training** — graph regularisation enables meaningful collaboration across Finnish weather stations
+- ✅ **Correlation-based graph ≥ geographic graph** — capturing meteorological similarity beyond proximity adds predictive value
+- ⚠️ **Limitations:** linear model capacity, static graph (fixed before training), single learning rate for all stations
+- 🔭 **Future work:** nonlinear local models (e.g. MLP), adaptive or time-varying graph construction, heterogeneous step sizes
+:::
+
+::: notes
+Keep this slide brief. The incremental list builds naturally toward the limitations and future work — which is what reviewers and TAs look for in a course project.
+:::
+
+---
+
+## {background-color="#0d1b2a"}
+
+::: {style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:60vh; gap:1em;"}
+
+[Thank you]{style="font-size:2.5em; font-weight:700; color:#ffffff;"}
+
+[Questions?]{style="font-size:1.8em; color:#4a9edd;"}
+
+[Slides · Code · Data: FMI Open Data]{style="font-size:0.6em; color:#4a9edd99; margin-top:1em;"}
+
+:::
+
+::: notes
+Leave the slide up during Q&A.
+:::

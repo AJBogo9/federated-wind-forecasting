@@ -21,6 +21,9 @@ __pycache__/
 # Quarto generated output (reproducible with `quarto render`)
 notebooks/report.html
 notebooks/report.quarto_ipynb
+notebooks/presentation.html
+notebooks/presentation_files/
+notebooks/presentation.quarto_ipynb
 notebooks/.jupyter_cache/
 notebooks/_freeze/
 
