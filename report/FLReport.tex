@@ -12,7 +12,7 @@
 \graphicspath{{../figures/}}
 
 \title{Federated Wind Speed Forecasting over Finland}
-\name{No Name (to make peer grading double-blind!)}
+\name{No Name}
 \address{}
 
 \begin{document}
@@ -31,29 +31,29 @@
 
 \section{Introduction}
 
-Motivation for the application
+Wind speed forecasting is valuable for grid operators managing Finland's growing
+wind energy capacity. Wind energy consumption has been stably growing from year 2015
+and in year 2024, the share of Finland energy consumption that war produced with wind
+energy was 24\% \cite{StatisticsFinland2025}.
 
-\begin{itemize}
-	\item Wind speed forecasting is valuable for grid operators managing Finland's growing wind energy capacity
-	\item FMI operates a dense network of stations across Finland. Collaboration between them would improve forecasting, especially for sparse regions
-	\item Raw station data my be commercially sensitive or subject to data-residency constraints, ruling out centralised training
-\end{itemize}
+The Finnish Meteorological Institute (FMI) provide extensive data on their station
+network publicly. They operate a dense network of stations across Finland and this
+report test the hypothesis if creating a collaborative federated learning (FL)
+network might help create better wind speed predictions compared to local models.
 
-Why FL is the right tool?
+Using federated learning is relevant for these types of weather prediction problems
+because raw station data might be commercially sensitive or subject to data-residency
+constraints thus ruling out centralized training. Another reason to use federated
+learning is if the data is sparse or the sensors are prone to making
+mistakes, local models can borrow predictive power from neighboring stations to
+improve their own predictions. \cite{McMahan2017}
 
-\begin{itemize}
-	\item Federated learning enables collaboration without sharing raw data. This is made possible with only sharing the model parameters of the local model.
-	\item Graph-regularised FL (GTVMin) is well-suited here because stations have a natural network structure: nearby or meteorologically similar stations should learn similar models
-	\item \cite{SarcheshmehPour2023, McMahan2017}
-\end{itemize}
-
-Learning objective
-
-\begin{itemize}
-	\item Each station trains a local linear model to predict next-hour wind speed from its own observations
-	\item The FL graph encodes which stations should influence each other during training
-	\item The key design question: does the choice of graph topology (geographic vs. correlation-based) meaningfully affect forecasting accuracy?
-\end{itemize}
+The object of this report is to create a federated model that predicts the next-hour
+wind speed from the three previous hours. The report trains a local linear model
+and then creates a FL graph that encodes which stations should influence each other
+during training. The key design question in this report is wether the choice of the
+graph topology (geographic vs. correlation-based) meaningfully affect the
+forecasting accuracy.
 
 \section{Problem Formulation}
 \label{sec:pf}
