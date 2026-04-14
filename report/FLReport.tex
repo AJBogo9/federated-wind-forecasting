@@ -58,12 +58,11 @@ forecasting accuracy.
 \section{Problem Formulation}
 \label{sec:pf}
 
-Nodes and station selection
-
-\begin{itemize}
-	\item Each node is one FMI weather station
-	\item Stations with less than 80\% hourly completeness over 2024 are excluded. Excluding these stations is justified because after filtering, there is still about 50 stations left. The station distribution is also well divided geographically all over finland (reference picture).
-\end{itemize}
+In the FL graph, each node is one FMI weather station. From all the stations that
+were returned from the API call, all with less than 80\% hourly completeness over 2024
+are excluded. Excluding these stations, there is still about 50 stations left to
+train the network on. The station distribution is also well divided geographically
+over all of Finland (\cref{fig:topology}) so no geographical biases are introduced by this filtering step.
 
 Features and labels
 
