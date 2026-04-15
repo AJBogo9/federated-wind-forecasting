@@ -48,7 +48,7 @@ learning is if the data is sparse or the sensors are prone to making
 mistakes, local models can borrow predictive power from neighboring stations to
 improve their own predictions. \cite{McMahan2017}
 
-The object of this report is to create a federated model that predicts the next-hour
+The objective of this report is to create a federated model that predicts the next-hour
 wind speed from the three previous hours. The report trains a local linear model
 and then creates a FL graph that encodes which stations should influence each other
 during training. The key design question in this report is wether the choice of the
@@ -62,60 +62,80 @@ In the FL graph, each node is one FMI weather station. From all the stations tha
 were returned from the API call, all with less than 80\% hourly completeness over 2024
 are excluded. Excluding these stations, there is still about 50 stations left to
 train the network on. The station distribution is also well divided geographically
-over all of Finland (\cref{fig:topology}) so no geographical biases are introduced by this filtering step.
+over all of Finland (\cref{fig:topology}) so no geographical biases are introduced by
+this filtering step.
 
-Features and labels
+Our local models are forecasting the next-hour wind speed at station $i$. Knowing the
+wind speed in the future is useful for planning other more controllable energy
+production (fossil fuel-based energy). For features, we use lagged wind speeds at
+times $t - 1, t - 2, t - 3$ and $t - 1$ lagged atmospheric pressure, temperature and
+humidity. EXPLAIN THE CHOICES OF FEATURES !! SHOULD HUMIDITY BE REMOVED FROM THE
+FEATURES BECAUSE IF MIGHT NOT HAVE A CORRELATION WITH WIND SPEEDS? MAYBE ALSO FIND
+CITATIONS FOR THIS! IF YOU DECIDE TO REMOVE HUMIDITY, YOU NEED TO ALSO MODIFY CODE.
 
-\begin{itemize}
-	\item Label: next-hour wind speed at station $i$. Knowing the wind speed in the future is useful for Finnish electricity companies.
-	\item Features: lagged wind speeds at $t - 1, t - 2, t - 3$. The wind speed tends to be similar to the previous hours.
-	\item Other features are lagged pressure, temperature and humidity. All are lagged $t - 1$. These features can predict future wind speed. ANY CITATIONS FOR THIS?? THERE HAS TO BE SOME LITERATURE ABOUT THIS!!
-	\item Both features and labels are z-score normalized ($\mu = 0, \sigma = 1$) using training-set statistics only.
-	\item Without normalizing, the bias term encodes stations mean wind speed, inflating the GTV penalty between meteorologically similar stations. CITATION OR PROOF???!!!
-\end{itemize}
+Both features and labels are z-score normalized ($\mu = 0, \sigma = 1$) using only
+the training set statistics. By normalizing we are able to create better predictions.
+For example if there are two weather stations that behave similarly because of similar
+geographical features, but one is more north than the other, after normalizing the
+stations will be able to better influence the other stations predictions.
+SEE HOW THE FINAL VERSION OF THE REPORT LOOKS LIKE. ADD A FORMAL PROOF FOR THIS IF
+IT IS NECESSARY.
 
-Local model
+The local model for each station is a simple linear regression:
 
 $$
 	\hat{y}^{(i)} = (\mathbf{w}^{(i)})^\top \mathbf{x}
 $$
 
-\begin{itemize}
-	\item Linear regression with a bias column appended to the feature vector. This is a simple baseline for a convex interpretable model on tabular weather data.
-\end{itemize}
+A bias column is appended to the weight matrix and the feature vector
+is appended with $1$.
 
-Local loss function
+The loss function is mean squared error (MSE):
 
-\begin{itemize}
-	\item Mean squared error (MSE). This is standard for regression. Is always positive and penalizes large errors
-\end{itemize}
+$$
+	L_i(\mathbf{w}^{(i)}) = \frac{1}{|\mathcal{D}^{(i)}|} \sum_{(\mathbf{x}, y) \in \mathcal{D}^{(i)}} \left( (\mathbf{w}^{(i)})^\top \mathbf{x} - y \right)^2
+$$
 
-Edges and edge weights (two systems)
+MSE is fairly standard in for linear regression models because it computes the
+mean of the squared errors ot the predictions and true labels. Squaring the error
+term penalizes larger errors.
 
-\begin{itemize}
-	\item \textbf{System 1: Geographic}. Connect each station to its $k = 5$ geographically nearest neighbours (haversine distance that takes into account global curving). Edge weights:
+This report compares two methods for graph constructions. The fist system is based
+station geography. The fist graph construction method connects each station to its
+$k = 5$ nearest neighbors. The distance between two stations is computed using
+Haversine distance to take into account global curving.
 
-	      $$A_{ij} = \exp \left( \frac{-d_{ij}^2}{\sigma^2} \right) $$
+Edges weights in the Geographic k-NN system are also based on the Haversine
+distance
 
-	      with $\sigma$ being the median squared pairwise distance.
-	\item \textbf{System 2: Correlation}. Connect each station to its $k = 5$ most correlated neighbours (Pearson correlation on 2024 wind speed series); edge weights = raw correlation value. The correlation captures the meteorological similarity beyond proximity alone.
-	\item $k = 5$ is a more or less arbitrary choice that balances the tradeoff of connectivity and over-smoothing.
-\end{itemize}
+$$A_{ij} = \exp \left( \frac{-d_{ij}^2}{\sigma^2} \right) $$
 
-\begin{figure*}[t]
+where $\sigma$ is the median squared pairwise distance.
+
+System 2 connects each station to its $k = 5$ most correlated neighbours. The
+correlation is measured with Pearson correlation on 2024 wind speed series:
+
+$$
+	A_{ij} = \frac{\sum_{t=1}^{T} (y_t^{(i)} - \bar{y}^{(i)})(y_t^{(j)} - \bar{y}^{(j)})}{\sqrt{\sum_{t=1}^{T}(y_t^{(i)} - \bar{y}^{(i)})^2 \sum_{t=1}^{T}(y_t^{(j)} - \bar{y}^{(j)})^2}}.
+$$
+
+This graph construction method should in theory be able to capture meteorological
+similarities beyond just geological proximity.
+
+\begin{figure}[t]
 	\centering
-	\begin{subfigure}[t]{0.48\textwidth}
+	\begin{subfigure}[t]{0.48\columnwidth}
 		\includegraphics[width=\textwidth]{topology_geo.pdf}
 		\caption{System 1 — Geographic k-NN}
 	\end{subfigure}
 	\hfill
-	\begin{subfigure}[t]{0.48\textwidth}
+	\begin{subfigure}[t]{0.48\columnwidth}
 		\includegraphics[width=\textwidth]{topology_corr.pdf}
 		\caption{System 2 — Correlation k-NN}
 	\end{subfigure}
 	\caption{FL network topology over Finland. Edges connect each station to its $k=5$ nearest neighbours; edge colour indicates the system. Edge width is proportional to $A_{ij}$.}
 	\label{fig:topology}
-\end{figure*}
+\end{figure}
 
 \begin{figure}[t]
 	\centering
