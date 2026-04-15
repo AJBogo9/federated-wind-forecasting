@@ -92,9 +92,10 @@ is appended with $1$.
 
 The loss function is mean squared error (MSE):
 
-$$
+\begin{equation}
 	L_i(\mathbf{w}^{(i)}) = \frac{1}{|\mathcal{D}^{(i)}|} \sum_{(\mathbf{x}, y) \in \mathcal{D}^{(i)}} \left( (\mathbf{w}^{(i)})^\top \mathbf{x} - y \right)^2
-$$
+	\label{eq:mse}
+\end{equation}
 
 MSE is fairly standard in for linear regression models because it computes the
 mean of the squared errors ot the predictions and true labels. Squaring the error
@@ -148,64 +149,49 @@ similarities beyond just geological proximity.
 \section{Methodology}
 \label{sec:meth}
 
-Variation measure
+The graph total variation (GTV) penalty uses the squared $\ell2$ norm
 
-\begin{itemize}
-	\item The GTV penalty uses the squared $\ell2$ norm
+\begin{equation}
+	\|\mathbf{w}^{(i)} - \mathbf{w}^{(j)}\|^2
+	\label{eq:gtv-penalty}
+\end{equation}
 
-	      $$
-		      |\mathbf{w}^{(i)} - \mathbf{w}^{(j)}|^2
-	      $$
+to measure disagreement between neighboring stations' parameters.
 
-	      to measure disagreement between neighboring stations' parameters
-	\item Natural choice for linear models since parameters live in $\mathbb{R}^d$, convex, and differentiable. This makes the overall objective tractable. EXPLAIN THIS MORE OR FIND CITATION!!
-\end{itemize}
+With \cref{eq:mse} and \cref{eq:gtv-penalty} the full GTVMin objective is
 
-GTVMin Objective
+\begin{equation}
+	\min_{\mathbf{w}^{(1)},\dots,\mathbf{w}^{(n)}} \underbrace{\sum_{i=1}^{n} L_i(\mathbf{w}^{(i)})}_{\text{local fit}} + \alpha \underbrace{\sum_{{i,j} \in \mathcal{E}} A_{ij} \|\mathbf{w}^{(i)} - \mathbf{w}^{(j)}\|^2}_{\text{GTV penalty}}
+	\label{eq:gtvmin}
+\end{equation}
 
-\begin{itemize}
-	\item Write out the full problem:
+where $\alpha$ is the collaboration strength. If $\alpha = 0$, there is no penalty
+for differing models. If $\alpha = \infty$, all stations will share their model.
 
-	      $$
-		      \min_{\mathbf{w}^{(1)},\dots,\mathbf{w}^{(n)}} \sum_{i=1}^{n} L_i(\mathbf{w}^{(i)}) + \alpha \sum_{{i,j} \in \mathcal{E}} A_{ij} |\mathbf{w}^{(i)} - \mathbf{w}^{(j)}|^2
-	      $$
+The GTVMin (\cref{eq:gtvmin}) is solved with synchronous federated gradient decent
+(FedGD). Using FedGD makes every node update simultaneously. During each iteration,
+the weights are updated by
 
-	\item Explain the parameters: $\alpha$ is the collaboration strength. If $\alpha = 0$ there is no penalty for differing models. If $\alpha = \infty$, all stations will share their model.
-\end{itemize}
+\begin{equation*}
+	\begin{split}
+		\mathbf{w}^{(i,t+1)} = \mathbf{w}^{(i,t)} - \eta \Bigl[
+		\underbrace{\nabla L_i(\mathbf{w}^{(i,t)})}_{\text{local gradient}} \\
+			+ 2\alpha \underbrace{\sum_{j \in \mathcal{N}(i)} A_{ij}\left(\mathbf{w}^{(i,t)} - \mathbf{w}^{(j,t)}\right)}_{\text{weighted disagreement}} \Bigr].
+	\end{split}
+	\label{eq:fedgd}
+\end{equation*}
 
-FL algorithm
+The first term is the gradient of the MSE of the local model. This term pulls the
+model toward fitting the station's own data. The second term is the weighted
+disagreement with neighbors (\cref{fig:topology}). This term pulls the local model
+toward agreement with similar neighboring stations.
 
-\begin{itemize}
-	\item GTVMin solved with synchronous federated gradient decent (FedGD)
-	\item Derived from the fixed-point equation by iterating the block-wise minimization operator $\mathcal{F}^{(i)}$
-	\item WRITE THIS SECTION OUT MORE IF YOU HAVE ROOM IN THE FIVE PAGE LIMIT!!
-\end{itemize}
-
-Update rule
-
-\begin{itemize}
-	\item Write the per-iteration update:
-
-	      \begin{equation*}
-		      \begin{split}
-			      \mathbf{w}^{(i,t+1)} = \mathbf{w}^{(i,t)} - \eta \Bigl[ \nabla L_i(\mathbf{w}^{(i,t)}) \\
-				      + 2\alpha \sum_{j \in \mathcal{N}(i)} A_{ij}\left(\mathbf{w}^{(i,t)} - \mathbf{w}^{(j,t)}\right) \Bigr]
-		      \end{split}
-	      \end{equation*}
-
-	\item First term: gradient of local MSE. This pulls the model toward fitting the station's own data
-	\item Second term: weighted disagreement with neighbors. This pulls the model toward agreement with similar stations
-\end{itemize}
-
-Message passing
-
-\begin{itemize}
-	\item Each iteration: node $i$ broadcasts $\mathbf{w}^{(i, t)}$ to all its neighbors and receives $\mathbf{w}^{(j, t)}$ from each neighbor $j \in \mathcal{N}(i)$
-	\item All nodes update simultaneously using the same snapshot of weights (synchronous)
-	\item Raw data $\mathcal{D}^{(i)}$ never leaves the node $i$. Only model parameters are communicated.
-	\item Communication cost $2|\mathcal{E}|$ messages per station
-\end{itemize}
-
+During each iteration, node $i$ broadcasts $\mathbf{w}^({i, t})$ to all its neighbors
+and receives $\mathbf{w}^{(j, t)}$ from each neighbor $j \in \mathcal{N}(i)$.
+Then after this, all nodes update simultaneously using the same time step $t$ weights.
+This way the raw data $\mathcal{D}^{(i)}$ never leaves the node $i$. Only the local
+model parameters get shared between stations. The communication cost $2|\mathcal{E}|$
+scales with the amount of stations.
 
 \section{Numerical Experiments}
 \label{sec:experiments}
