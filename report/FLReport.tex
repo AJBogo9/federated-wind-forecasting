@@ -186,7 +186,7 @@ model toward fitting the station's own data. The second term is the weighted
 disagreement with neighbors (\cref{fig:topology}). This term pulls the local model
 toward agreement with similar neighboring stations.
 
-During each iteration, node $i$ broadcasts $\mathbf{w}^({i, t})$ to all its neighbors
+During each iteration, node $i$ broadcasts $\mathbf{w}^{(i, t)}$ to all its neighbors
 and receives $\mathbf{w}^{(j, t)}$ from each neighbor $j \in \mathcal{N}(i)$.
 Then after this, all nodes update simultaneously using the same time step $t$ weights.
 This way the raw data $\mathcal{D}^{(i)}$ never leaves the node $i$. Only the local
@@ -199,7 +199,7 @@ scales with the amount of stations.
 Data source
 
 \begin{itemize}
-	\item FMI Open Data, hourly observations throughout 2024
+	\item FMI Open Data, hourly observations throughout 2024 \cite{FMIOpenData}
 	\item ~50 stations retained after applying the 80\% completeness filter
 	\item Variables fetched: wind speed, temperature, relative humidity and atmospheric pressure
 \end{itemize}
