@@ -21,6 +21,7 @@ csl: https://www.zotero.org/styles/ieee
 execute:
   echo: false
   warning: false
+  freeze: auto
 jupyter: python3
 ---
 
