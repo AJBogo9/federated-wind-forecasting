@@ -196,28 +196,22 @@ scales with the amount of stations.
 \section{Numerical Experiments}
 \label{sec:experiments}
 
-Data source
+As data, the report uses FMI Open Data \cite{FMIOpenData} hourly observations throughout 2024.
+The station data is fetched and then cleaned and processed. The biggest processing step
+is filtering all stations that don't have at least 80\% data completeness. After this filtering
+There are 50 stations left for building the FL graph. The relevant features from the API are
+wind speed, temperature, humidity and atmospheric pressure.
 
-\begin{itemize}
-	\item FMI Open Data, hourly observations throughout 2024 \cite{FMIOpenData}
-	\item ~50 stations retained after applying the 80\% completeness filter
-	\item Variables fetched: wind speed, temperature, relative humidity and atmospheric pressure
-\end{itemize}
+The data set is split into a training, validation and test split. With time series data,
+the split has to retain chronological order so that future data is not informed by past
+data. The report uses a 70/15/15 split: 70\% of the chronologically first
+data points are in the train set, 15\% in the validation and 15\% in the test set.
 
-Train/val/test split
-
-\begin{itemize}
-	\item Chronological split. 70\% train, 15\% validation, 15\% test
-	\item Temporal order must be preserved to avoid leakage (future data must never inform past predictions)
-\end{itemize}
-
-Hyperparameter selection
-
-\begin{itemize}
-	\item Regularization strength $\alpha$ selected via grid search over $[0.0, 0.01, 0.1, 0.5, 2.0, 5.0]$
-	\item Each candidate $\alpha$ is evaluated by running FedGD for a fixed number of iterations and measuring mean validation MSE across all stations
-	\item Best $\alpha$ is selected separately for each system
-\end{itemize}
+Before comparing the performance of the two graph construction methods, an optimal
+hyperparameter $\alpha$ has to be chosen. This is done by running the FedGD algorithm
+for a fixed number of iterations and measuring the mean validation MSE across all
+stations. From \cref{fig:alpha-sweep}, both graphs perform the best when $\alpha = 0.1$.
+This value for $\alpha$ will then be used for with both systems to compare their performance.
 
 \begin{figure}[t]
 	\centering
@@ -226,12 +220,11 @@ Hyperparameter selection
 	\label{fig:alpha-sweep}
 \end{figure}
 
-Baseline
-
-\begin{itemize}
-	\item $\alpha = 0$: Each station trains independently with no collaboration
-	\item All systems are compared against this to verify that federation learning helps
-\end{itemize}
+The thesis of this report is to investigate how federated learning can improve
+the predictions of local data points. Thus the baseline model that is used
+is the pure local model where $\alpha = 0$. If there is no meaningful improvement,
+it can be concluded that federated learning doesn't provide any meaningful contribution
+to this specific application.
 
 Full runs
 
