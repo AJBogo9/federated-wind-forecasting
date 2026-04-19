@@ -21,7 +21,12 @@
 
 \begin{abstract}
 
-	Write the abstract last when you know what the project will look like!!
+	\begin{itemize}
+		\item This report investigates whether federated learning over a station graph improves next-hour wind speed forecasting compared to independent local models using FMI hourly observations from 2024
+		\item Each station trains a local linear model. Then two graph topologies are compared. The first topology is geographic k-NN and correlation k-NN. Then the FL systems are trained with FedGD and compared with each other.
+		\item Both FL systems achieve negligible improvement over the baseline, with the $\alpha$-sweep selecting a small regularization strength ($\alpha=0.1$), indicating that strong collaboration is harmful.
+		\item The result is attributed to the local model being already well-specified: abundant per-station data and a simple linear model leave little room for graph regularization to add value.
+	\end{itemize}
 
 \end{abstract}
 
