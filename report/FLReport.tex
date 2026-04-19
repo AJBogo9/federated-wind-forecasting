@@ -12,7 +12,7 @@
 \graphicspath{{../figures/}}
 
 \title{Federated Wind Speed Forecasting over Finland}
-\name{No Name}
+\name{}
 \address{}
 
 \begin{document}
@@ -127,12 +127,12 @@ similarities beyond just geological proximity.
 	\centering
 	\begin{subfigure}[t]{0.48\columnwidth}
 		\includegraphics[width=\textwidth]{topology_geo.pdf}
-		\caption{System 1 — Geographic k-NN}
+		\caption{System 1: Geographic k-NN}
 	\end{subfigure}
 	\hfill
 	\begin{subfigure}[t]{0.48\columnwidth}
 		\includegraphics[width=\textwidth]{topology_corr.pdf}
-		\caption{System 2 — Correlation k-NN}
+		\caption{System 2: Correlation k-NN}
 	\end{subfigure}
 	\caption{FL network topology over Finland. Edges connect each station to its $k=5$ nearest neighbours; edge colour indicates the system. Edge width is proportional to $A_{ij}$.}
 	\label{fig:topology}
@@ -199,7 +199,7 @@ scales with the amount of stations.
 As data, the report uses FMI Open Data \cite{FMIOpenData} hourly observations throughout 2024.
 The station data is fetched and then cleaned and processed. The biggest processing step
 is filtering all stations that don't have at least 80\% data completeness. After this filtering
-There are 50 stations left for building the FL graph. The relevant features from the API are
+there are 50 stations left for building the FL graph. The relevant features from the API are
 wind speed, temperature, humidity and atmospheric pressure.
 
 The data set is split into a training, validation and test split. With time series data,
@@ -211,7 +211,7 @@ Before comparing the performance of the two graph construction methods, an optim
 hyperparameter $\alpha$ has to be chosen. This is done by running the FedGD algorithm
 for a fixed number of iterations and measuring the mean validation MSE across all
 stations. From \cref{fig:alpha-sweep}, both graphs perform the best when $\alpha = 0.1$.
-This value for $\alpha$ will then be used for with both systems to compare their performance.
+This value for $\alpha$ will then be used with both systems to compare their performance.
 
 \begin{figure}[t]
 	\centering
@@ -235,6 +235,12 @@ to this specific application.
 	\label{fig:convergence}
 \end{figure}
 
+After running the FL experiments, the results are listed in \cref{tab:results}.
+The table shows that all systems perform basically identically. Looking at the
+test MSE, there is a marginal improvement, but this is practically an
+insignificant difference. Also when looking at the convergence graph in \cref{fig:convergence},
+the systems show basically identical convergence behavior.
+
 \begin{figure}[t]
 	\centering
 	\includegraphics[width=\columnwidth]{node_boxplot.pdf}
@@ -249,7 +255,12 @@ to this specific application.
 	\label{fig:pred-vs-actual}
 \end{figure}
 
-Comparison between systems
+The \cref{fig:node-boxplot} shows how the test MSE are distributed among all three models.
+The main insight from \cref{fig:node-boxplot} is that none of the models are able to reduce
+the test MSE of the outliers. This can be explained by the bigger variation of certain stations.
+The \cref{fig:pred-vs-actual} shows the best fit and the worst fit based on MSE. From the figure,
+there is a clear pattern that the worst fits are caused by more variation in the data,
+not the worse quality of the model. THIS PART IS A BIT SHAKY!! COME BACK TO THIS!!
 
 \section{Conclusion}
 \label{sec:conclusion}
