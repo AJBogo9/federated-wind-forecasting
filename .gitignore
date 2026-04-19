@@ -18,16 +18,16 @@ __pycache__/
 # Jupyter
 .ipynb_checkpoints/
 
-# Quarto generated output (reproducible with `quarto render`)
+# Quarto generated output
 notebooks/report.html
-notebooks/report.quarto_ipynb
 notebooks/presentation.html
 notebooks/presentation_files/
-notebooks/presentation.quarto_ipynb
 notebooks/.jupyter_cache/
 notebooks/_freeze/
+*.quarto_ipynb
+*.quarto_ipynb_*
 
-# Data (optional, remove if you want to track data)
+# Data
 data/
 *.bbl
 *.blg
