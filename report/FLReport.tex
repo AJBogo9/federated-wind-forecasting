@@ -265,7 +265,14 @@ not the worse quality of the model. THIS PART IS A BIT SHAKY!! COME BACK TO THIS
 \section{Conclusion}
 \label{sec:conclusion}
 
-WRITE THIS WHEN ALL OTHER PARTS OF THE REPORT ARE LOOKING GOOD!!
+\begin{itemize}
+	\item The report tested whether federated learning over a geographic or correlation-based graph improves next-hour wind speed forecasting compared to a purely local baseline.
+	\item Both FL systems achieved negligible improvement over the baseline (test MSE reduction of ~0.001), indicating that collaboration provided no practically meaningful benefit in this setting.
+	\item The $\alpha$-sweep selected a small regularization strength ($\alpha = 0.1$), which itself signals that strong inter-station collaboration is harmful. In practice this means that neighbors add noise rather than useful signal.
+	\item The boxplot confirms the aggregate finding at the per-node level: FL neither rescues the worst-performing stations nor degrades the best-performing ones.
+	\item The negative result is attributed to simplicity of the local model. A 7-parameter linear regression trained on abundant local data leaves little room for graph regularization to help
+	\item Future work could test more expressive local models (e.g. MLPs), sparser data regimes where borrowing from neighbours becomes more valuable. Another interesting future direction would be wind-flow-aware graph construction that better captures meteorological dependencies.
+\end{itemize}
 
 \bibliographystyle{plain}
 \bibliography{references}
