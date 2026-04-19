@@ -1,0 +1,14 @@
+\begin{table*}[t]
+  \centering
+  \caption{Mean MSE across all stations (normalised labels). Bold marks the best test MSE.}
+  \label{tab:results}
+  \begin{tabular}{lcccc}
+    \hline
+    \textbf{System} & $\bm{\alpha}$ & \textbf{Train MSE} & \textbf{Val MSE} & \textbf{Test MSE} \\
+    \hline
+    Baseline ($\alpha=0$) & 0.00 & 0.2345 & 0.2381 & 0.2638 \\
+    System 1 — Geographic & 0.10 & 0.2347 & 0.2377 & 0.2630 \\
+    System 2 — Correlation & 0.10 & 0.2349 & 0.2377 & \textbf{0.2628} \\
+    \hline
+  \end{tabular}
+\end{table*}
