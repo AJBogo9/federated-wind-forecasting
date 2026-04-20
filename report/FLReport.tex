@@ -31,7 +31,7 @@
 	For the FL models, the report constructs two graph topologies and compares
 	them to the baseline model. The first graph topology is geographic k-NN which
 	creates $k$ edges between the $k$ geographically closest nodes. The second
-	topology is tje correlation k-NN. In this graph, nodes have edges between their
+	topology is the correlation k-NN. In this graph, nodes have edges between their
 	$k$ most highly correlated (similar) neighbors. Then the FL systems are trained
 	with FedGD and compared with each other.
 
@@ -53,7 +53,7 @@
 
 Wind speed forecasting is valuable for grid operators managing Finland's growing
 wind energy capacity. Wind energy consumption has been stably growing from year 2015
-and in year 2024, the share of Finland energy consumption that war produced with wind
+and in year 2024, the share of Finland energy consumption that was produced with wind
 energy was 24\% \cite{StatisticsFinland2025}.
 
 The Finnish Meteorological Institute (FMI) provide extensive data on their station
@@ -118,11 +118,11 @@ The loss function is mean squared error (MSE):
 \end{equation}
 
 MSE is fairly standard in for linear regression models because it computes the
-mean of the squared errors ot the predictions and true labels. Squaring the error
+mean of the squared errors of the predictions and true labels. Squaring the error
 term penalizes larger errors.
 
-This report compares two methods for graph constructions. The fist system is based
-station geography. The fist graph construction method connects each station to its
+This report compares two methods for graph constructions. The first system is based
+station geography. The first graph construction method connects each station to its
 $k = 5$ nearest neighbors. The distance between two stations is computed using
 Haversine distance to take into account global curving.
 
@@ -285,7 +285,7 @@ not the worse quality of the model. THIS PART IS A BIT SHAKY!! COME BACK TO THIS
 \section{Conclusion}
 \label{sec:conclusion}
 
-The report tested wether federated learning over a geographic or correlation-based
+The report tested whether federated learning over a geographic or correlation-based
 graph improves next-hour wind speed forecasting. The report used a purely local model
 as the baseline to research the effects of the federated models. When comparing the
 FL models to the baseline, the report found that that both FL systems achieved
@@ -293,7 +293,7 @@ negligible improvement over the baseline (\cref{tab:results}), indicating that
 collaboration provided no practical benefit in this setting.
 
 The $\alpha$-sweep selected a small regularization strength ($\alpha = 0.1$), which
-suggest that strong inter-station collaboration is harmful. The boxplot
+suggests that strong inter-station collaboration is harmful. The boxplot
 (\cref{fig:node-boxplot}) confirms the aggregate finding at the per-node level:
 FL neither rescues the worst performing stations nor degrades the best performing ones.
 The negative result is because of the simplicity of the local model. A 7-parameter
