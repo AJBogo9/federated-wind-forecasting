@@ -21,12 +21,27 @@
 
 \begin{abstract}
 
-	\begin{itemize}
-		\item This report investigates whether federated learning over a station graph improves next-hour wind speed forecasting compared to independent local models using FMI hourly observations from 2024
-		\item Each station trains a local linear model. Then two graph topologies are compared. The first topology is geographic k-NN and correlation k-NN. Then the FL systems are trained with FedGD and compared with each other.
-		\item Both FL systems achieve negligible improvement over the baseline, with the $\alpha$-sweep selecting a small regularization strength ($\alpha=0.1$), indicating that strong collaboration is harmful.
-		\item The result is attributed to the local model being already well-specified: abundant per-station data and a simple linear model leave little room for graph regularization to add value.
-	\end{itemize}
+	The goal of this report is to investigate whether federated learning (FL) over
+	a weather station graph improves next-hour wind speed forecasting. The report
+	uses completely independent local models as the baseline and compares them
+	to the FL model using the weather station graphs. As the dateset, the report
+	uses the Finnish Meteorological Institute (FMI) \cite{FMIOpenData} hourly
+	observation data from 2024.
+
+	For the FL models, the report constructs two graph topologies and compares
+	them to the baseline model. The first graph topology is geographic k-NN which
+	creates $k$ edges between the $k$ geographically closest nodes. The second
+	topology is tje correlation k-NN. In this graph, nodes have edges between their
+	$k$ most highly correlated (similar) neighbors. Then the FL systems are trained
+	with FedGD and compared with each other.
+
+	After training the baseline and both FL models, the report finds that both FL
+	systems achieve negligible improvement over the baseline, with the $\alpha$-sweep
+	selecting a small regularization strength ($\alpha = 0.1$), indicating that
+	strong collaboration is harmful. The result is explained by the local model being
+	already well-specified. The local has an abundance of data (one year) and
+	a simple linear model leaves little room for graph regularization to improve
+	forecasting.
 
 \end{abstract}
 
@@ -51,7 +66,7 @@ because raw station data might be commercially sensitive or subject to data-resi
 constraints thus ruling out centralized training. Another reason to use federated
 learning is if the data is sparse or the sensors are prone to making
 mistakes, local models can borrow predictive power from neighboring stations to
-improve their own predictions. \cite{McMahan2017}
+improve their own predictions \cite{McMahan2017}.
 
 The objective of this report is to create a federated model that predicts the next-hour
 wind speed from the three previous hours. The report trains a local linear model
@@ -154,7 +169,7 @@ similarities beyond just geological proximity.
 \section{Methodology}
 \label{sec:meth}
 
-The graph total variation (GTV) penalty uses the squared $\ell2$ norm
+The graph total variation (GTV) \cite{SarcheshmehPour2023} penalty uses the squared $\ell2$ norm
 
 \begin{equation}
 	\|\mathbf{w}^{(i)} - \mathbf{w}^{(j)}\|^2
@@ -270,14 +285,29 @@ not the worse quality of the model. THIS PART IS A BIT SHAKY!! COME BACK TO THIS
 \section{Conclusion}
 \label{sec:conclusion}
 
-\begin{itemize}
-	\item The report tested whether federated learning over a geographic or correlation-based graph improves next-hour wind speed forecasting compared to a purely local baseline.
-	\item Both FL systems achieved negligible improvement over the baseline (test MSE reduction of ~0.001), indicating that collaboration provided no practically meaningful benefit in this setting.
-	\item The $\alpha$-sweep selected a small regularization strength ($\alpha = 0.1$), which itself signals that strong inter-station collaboration is harmful. In practice this means that neighbors add noise rather than useful signal.
-	\item The boxplot confirms the aggregate finding at the per-node level: FL neither rescues the worst-performing stations nor degrades the best-performing ones.
-	\item The negative result is attributed to simplicity of the local model. A 7-parameter linear regression trained on abundant local data leaves little room for graph regularization to help
-	\item Future work could test more expressive local models (e.g. MLPs), sparser data regimes where borrowing from neighbours becomes more valuable. Another interesting future direction would be wind-flow-aware graph construction that better captures meteorological dependencies.
-\end{itemize}
+The report tested wether federated learning over a geographic or correlation-based
+graph improves next-hour wind speed forecasting. The report used a purely local model
+as the baseline to research the effects of the federated models. When comparing the
+FL models to the baseline, the report found that that both FL systems achieved
+negligible improvement over the baseline (\cref{tab:results}), indicating that
+collaboration provided no practical benefit in this setting.
+
+The $\alpha$-sweep selected a small regularization strength ($\alpha = 0.1$), which
+suggest that strong inter-station collaboration is harmful. The boxplot
+(\cref{fig:node-boxplot}) confirms the aggregate finding at the per-node level:
+FL neither rescues the worst performing stations nor degrades the best performing ones.
+The negative result is because of the simplicity of the local model. A 7-parameter
+linear regression trained on abundant local data leaves little room for graph
+regularization to help.
+
+Future work could test more expressive local models (e.g. MLPs), sparser data regimes
+where borrowing from neighbours becomes more valuable. Another interesting future
+direction is wind-flow-aware graph construction that better captures meteorological
+dependencies. SHOULD I REMOVE THE WIND-FLOW-AWARE GRAPH CONSTRUCTION AND COME UP
+WITH SOME OTHER FUTURE DIRECTIONS? I FEEL LIKE THE WIND-FLOW GRAPH WILL NOT IMPROVE
+ON THE LINEAR MODEL. BUT MAYBE IF I REPHRASE IT SO THAT I SUGGEST TRYING ANOTHER LOCAL
+MODEL AND THE WIND-FLOW-AWARE GRAPH CONSTRUCTION.
+
 
 \bibliographystyle{plain}
 \bibliography{references}
