@@ -94,19 +94,18 @@ this filtering step.
 
 Our local models are forecasting the next-hour wind speed at station $i$. Knowing the
 wind speed in the future is useful for planning other more controllable energy
-production (fossil fuel-based energy). For features, we use lagged wind speeds at
-times $t - 1, t - 2, t - 3$ and $t - 1$ lagged atmospheric pressure, temperature and
-humidity. EXPLAIN THE CHOICES OF FEATURES !! SHOULD HUMIDITY BE REMOVED FROM THE
-FEATURES BECAUSE IF MIGHT NOT HAVE A CORRELATION WITH WIND SPEEDS? MAYBE ALSO FIND
-CITATIONS FOR THIS! IF YOU DECIDE TO REMOVE HUMIDITY, YOU NEED TO ALSO MODIFY CODE.
+production (fossil fuel-based energy). For features, the report uses lagged wind speeds
+at times $t - 1, t - 2, t - 3$ and $t - 1$ lagged atmospheric pressure, temperature and
+humidity. The lagged wind speeds are used because they are the most direct predictor
+of the wind speed at time $t$. Pressure gradients are what create surface wind thus
+justifying it as a feature. Temperature and humidity don't directly cause wind, but
+they correlate with large scale weather patterns like storms that affect wind speeds.
 
 Both features and labels are z-score normalized ($\mu = 0, \sigma = 1$) using only
 the training set statistics. By normalizing we are able to create better predictions.
 For example if there are two weather stations that behave similarly because of similar
 geographical features, but one is more north than the other, after normalizing the
 stations will be able to better influence the other stations predictions.
-SEE HOW THE FINAL VERSION OF THE REPORT LOOKS LIKE. ADD A FORMAL PROOF FOR THIS IF
-IT IS NECESSARY.
 
 The local model for each station is a simple linear regression:
 
@@ -124,9 +123,11 @@ The loss function is mean squared error (MSE):
 	\label{eq:mse}
 \end{equation}
 
-MSE is fairly standard in for linear regression models because it computes the
-mean of the squared errors of the predictions and true labels. Squaring the error
-term penalizes larger errors.
+MSE is chosen over alternatives such as mean absolute error (MAE) because MSE is
+differentiable everywhere. This property of MSE pairs well with gradient-based
+optimization and produces a clean and closed-form gradient for the linear models.
+The quadratic penalty also penalizes larger prediction errors more heavily, which is
+useful for capturing outliers in addition to typical measurements.
 
 This report compares two methods for graph constructions. The first system is based
 station geography. The first graph construction method connects each station to its
@@ -183,7 +184,9 @@ The graph total variation (GTV) \cite{SarcheshmehPour2023} penalty uses the squa
 	\label{eq:gtv-penalty}
 \end{equation}
 
-to measure disagreement between neighboring stations' parameters.
+to measure disagreement between neighboring stations' parameters. The squared $\ell_2$
+norm is chosen over an $\ell_1$-based penalty because the $\ell_2$ is smooth and convex,
+giving a closed-form gradient term pairs well with the FedGD algorithm.
 
 With \cref{eq:mse} and \cref{eq:gtv-penalty} the full GTVMin objective is
 
