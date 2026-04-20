@@ -66,7 +66,7 @@ because raw station data might be commercially sensitive or subject to data-resi
 constraints thus ruling out centralized training. Another reason to use federated
 learning is if the data is sparse or the sensors are prone to making
 mistakes, local models can borrow predictive power from neighboring stations to
-improve their own predictions \cite{McMahan2017}.
+improve their own predictions \cite{McMahan2017, LiWind2023}.
 
 The objective of this report is to create a federated model that predicts the next-hour
 wind speed from the three previous hours. The report trains a local linear model
@@ -189,7 +189,7 @@ where $\alpha$ is the collaboration strength. If $\alpha = 0$, there is no penal
 for differing models. If $\alpha = \infty$, all stations will share their model.
 
 The GTVMin (\cref{eq:gtvmin}) is solved with synchronous federated gradient decent
-(FedGD). Using FedGD makes every node update simultaneously. During each iteration,
+(FedGD) \cite{Jung2025}. Using FedGD makes every node update simultaneously. During each iteration,
 the weights are updated by
 
 \begin{equation*}
