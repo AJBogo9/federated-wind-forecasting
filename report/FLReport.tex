@@ -33,7 +33,7 @@
 	creates $k$ edges between the $k$ geographically closest nodes. The second
 	topology is the correlation k-NN. In this graph, nodes have edges between their
 	$k$ most highly correlated (similar) neighbors. Then the FL systems are trained
-	with FedGD and compared with each other.
+	with FedGD \cite{McMahan2017} and compared with each other.
 
 	After training the baseline and both FL models, the report finds that both FL
 	systems achieve negligible improvement over the baseline, with the $\alpha$-sweep
@@ -58,7 +58,7 @@ energy was 24\% \cite{StatisticsFinland2025}.
 
 The Finnish Meteorological Institute (FMI) provides extensive data on their station
 network publicly. They operate a dense network of stations across Finland and this
-report test the hypothesis of whether a collaborative federated learning (FL)
+report tests the hypothesis of whether a collaborative federated learning (FL)
 network might help create better wind speed predictions compared to local models.
 
 Using federated learning is relevant for these types of weather prediction problems
@@ -67,7 +67,7 @@ constraints thus ruling out centralized training. Another reason to use federate
 learning is if the data is sparse or the sensors are prone to making
 mistakes, local models can borrow predictive power from neighboring stations to
 improve their own predictions. While personalized FL has been applied to wind
-power forecasting over small wind farm networks \cite{McMahan2017, LiWind2023},
+power forecasting over small wind farm networks \cite{LiWind2023},
 graph-regularized approaches that exploit the spatial structure of dense
 public meteorological networks for wind speed are still fairly unexplored.
 
@@ -75,10 +75,10 @@ The objective of this report is to create a federated model that predicts the ne
 wind speed from the three previous hours. The report trains a local linear model
 and then creates a FL graph that encodes which stations should influence each other
 during training. The key design question in this report is whether the choice of the
-graph topology (geographic vs. correlation-based) meaningfully affect the
+graph topology (geographic vs. correlation-based) meaningfully affects the
 forecasting accuracy.
 
-The report thesis is investigated in the following manner. Section 2 introduces
+The report's thesis is investigated in the following manner. Section 2 introduces
 the federated learning problem, defines the networks, features and loss function. Then
 section 3 describes the GTVMin objective and FedGD algorithm. Section 4 presents
 the results from running the code. The results section compares both graph topologies
@@ -227,7 +227,7 @@ and receives $\mathbf{w}^{(j, t)}$ from each neighbor $j \in \mathcal{N}(i)$.
 Then after this, all nodes update simultaneously using the same time step $t$ weights.
 This way the raw data $\mathcal{D}^{(i)}$ never leaves the node $i$. Only the local
 model parameters get shared between stations. The communication cost $2|\mathcal{E}|$
-scales with the number data of stations.
+scales with the number of stations.
 
 \section{Numerical Experiments}
 \label{sec:experiments}
