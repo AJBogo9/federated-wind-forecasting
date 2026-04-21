@@ -229,6 +229,10 @@ This way the raw data $\mathcal{D}^{(i)}$ never leaves the node $i$. Only the lo
 model parameters get shared between stations. The communication cost $2|\mathcal{E}|$
 scales with the number of stations.
 
+The following hyperparameters are used: All models are initialized with weights
+drawn from $\mathcal{N}(0, 0.01)$ and trained for 750 iterations with learning rate
+$\eta = 0.01$. For the $\alpha$-sweep, 300 iterations are used per candidate value.
+
 \section{Numerical Experiments}
 \label{sec:experiments}
 
