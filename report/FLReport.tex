@@ -66,7 +66,10 @@ because raw station data might be commercially sensitive or subject to data-resi
 constraints thus ruling out centralized training. Another reason to use federated
 learning is if the data is sparse or the sensors are prone to making
 mistakes, local models can borrow predictive power from neighboring stations to
-improve their own predictions \cite{McMahan2017, LiWind2023}.
+improve their own predictions. While personalized FL has been applied to wind
+power forecasting over small wind farm networks \cite{McMahan2017, LiWind2023},
+graph-regularized approaches that exploit the spatial structure of dense
+public meteorological networks for wind speed are still fairly unexplored.
 
 The objective of this report is to create a federated model that predicts the next-hour
 wind speed from the three previous hours. The report trains a local linear model
@@ -269,7 +272,9 @@ After running the FL experiments, the results are listed in \cref{tab:results}.
 The table shows that all systems perform basically identically. Looking at the
 test MSE, there is a marginal improvement, but this is practically an
 insignificant difference. Also when looking at the convergence graph in \cref{fig:convergence},
-the systems show basically identical convergence behavior.
+the systems show basically identical convergence behavior. The training loss also
+converges smoothly for all systems, which indicates that the linear model is a good
+choice for this application.
 
 \begin{figure}[t]
 	\centering
