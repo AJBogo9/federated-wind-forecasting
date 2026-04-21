@@ -116,7 +116,11 @@ $$
 	\hat{y}^{(i)} = (\mathbf{w}^{(i)})^\top \mathbf{x}
 $$
 
-A bias column is appended to the feature vector.
+Linear is chosen to as the model because only 7 features are used and each station
+has abundant training data ($\geq 80\%$ of 1 year hourly observations). Because of
+the massive amount of training data, no additional regularization is needed for
+the linear models. The closed-form gradient of the linear model also pairs well
+with the FedGD update rule.
 
 The loss function is mean squared error (MSE):
 
@@ -223,7 +227,7 @@ and receives $\mathbf{w}^{(j, t)}$ from each neighbor $j \in \mathcal{N}(i)$.
 Then after this, all nodes update simultaneously using the same time step $t$ weights.
 This way the raw data $\mathcal{D}^{(i)}$ never leaves the node $i$. Only the local
 model parameters get shared between stations. The communication cost $2|\mathcal{E}|$
-scales with the numberdata of stations.
+scales with the number data of stations.
 
 \section{Numerical Experiments}
 \label{sec:experiments}
@@ -248,7 +252,7 @@ This value for $\alpha$ will then be used with both systems to compare their per
 \begin{figure}[t]
 	\centering
 	\includegraphics[width=\columnwidth]{alpha_sweep.pdf}
-	\caption{Mean validation MSE vs.\ regularisation strength $\alpha$ for both systems. Dashed lines mark the selected $\alpha^*$.}
+	\caption{Mean validation MSE vs.\ regularization strength $\alpha$ for both systems. Dashed lines mark the selected $\alpha^*$.}
 	\label{fig:alpha-sweep}
 \end{figure}
 
@@ -278,7 +282,7 @@ choice for this application.
 \begin{figure}[t]
 	\centering
 	\includegraphics[width=\columnwidth]{node_boxplot.pdf}
-	\caption{Distribution of per-node test MSE (normalised) across all stations for the baseline, System 1, and System 2.}
+	\caption{Distribution of per-node test MSE (normalized) across all stations for the baseline, System 1, and System 2.}
 	\label{fig:node-boxplot}
 \end{figure}
 
