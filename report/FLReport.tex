@@ -56,9 +56,9 @@ wind energy capacity. Wind energy consumption has been stably growing from year 
 and in year 2024, the share of Finland energy consumption that was produced with wind
 energy was 24\% \cite{StatisticsFinland2025}.
 
-The Finnish Meteorological Institute (FMI) provide extensive data on their station
+The Finnish Meteorological Institute (FMI) provides extensive data on their station
 network publicly. They operate a dense network of stations across Finland and this
-report test the hypothesis if creating a collaborative federated learning (FL)
+report test the hypothesis of whether a collaborative federated learning (FL)
 network might help create better wind speed predictions compared to local models.
 
 Using federated learning is relevant for these types of weather prediction problems
@@ -90,12 +90,12 @@ results of the report and future research directions.
 
 In the FL graph, each node is one FMI weather station. From all the stations that
 were returned from the API call, all with less than 80\% hourly completeness over 2024
-are excluded. Excluding these stations, there is still about 50 stations left to
+are excluded. Excluding these stations, there are still about 50 stations left to
 train the network on. The station distribution is also well divided geographically
 over all of Finland (\cref{fig:topology}) so no geographical biases are introduced by
 this filtering step.
 
-Our local models are forecasting the next-hour wind speed at station $i$. Knowing the
+Our local models forecast the next-hour wind speed at station $i$. Knowing the
 wind speed in the future is useful for planning other more controllable energy
 production (fossil fuel-based energy). For features, the report uses lagged wind speeds
 at times $t - 1, t - 2, t - 3$ and $t - 1$ lagged atmospheric pressure, temperature and
@@ -116,8 +116,7 @@ $$
 	\hat{y}^{(i)} = (\mathbf{w}^{(i)})^\top \mathbf{x}
 $$
 
-A bias column is appended to the weight matrix and the feature vector
-is appended with $1$.
+A bias column is appended to the feature vector.
 
 The loss function is mean squared error (MSE):
 
@@ -133,7 +132,7 @@ The quadratic penalty also penalizes larger prediction errors more heavily, whic
 useful for capturing outliers in addition to typical measurements.
 
 This report compares two methods for graph constructions. The first system is based
-station geography. The first graph construction method connects each station to its
+on station geography. The first graph construction method connects each station to its
 $k = 5$ nearest neighbors. The distance between two stations is computed using
 Haversine distance to take into account global curving.
 
@@ -152,7 +151,7 @@ $$
 $$
 
 This graph construction method should in theory be able to capture meteorological
-similarities beyond just geological proximity.
+similarities beyond just geographical proximity.
 
 \begin{figure}[t]
 	\centering
@@ -189,7 +188,7 @@ The graph total variation (GTV) \cite{SarcheshmehPour2023} penalty uses the squa
 
 to measure disagreement between neighboring stations' parameters. The squared $\ell_2$
 norm is chosen over an $\ell_1$-based penalty because the $\ell_2$ is smooth and convex,
-giving a closed-form gradient term pairs well with the FedGD algorithm.
+giving a closed-form gradient that pairs well with the FedGD algorithm.
 
 With \cref{eq:mse} and \cref{eq:gtv-penalty} the full GTVMin objective is
 
@@ -201,7 +200,7 @@ With \cref{eq:mse} and \cref{eq:gtv-penalty} the full GTVMin objective is
 where $\alpha$ is the collaboration strength. If $\alpha = 0$, there is no penalty
 for differing models. If $\alpha = \infty$, all stations will share their model.
 
-The GTVMin (\cref{eq:gtvmin}) is solved with synchronous federated gradient decent
+The GTVMin (\cref{eq:gtvmin}) is solved with synchronous federated gradient descent
 (FedGD) \cite{Jung2025}. Using FedGD makes every node update simultaneously. During each iteration,
 the weights are updated by
 
@@ -224,7 +223,7 @@ and receives $\mathbf{w}^{(j, t)}$ from each neighbor $j \in \mathcal{N}(i)$.
 Then after this, all nodes update simultaneously using the same time step $t$ weights.
 This way the raw data $\mathcal{D}^{(i)}$ never leaves the node $i$. Only the local
 model parameters get shared between stations. The communication cost $2|\mathcal{E}|$
-scales with the amount of stations.
+scales with the numberdata of stations.
 
 \section{Numerical Experiments}
 \label{sec:experiments}
@@ -253,8 +252,8 @@ This value for $\alpha$ will then be used with both systems to compare their per
 	\label{fig:alpha-sweep}
 \end{figure}
 
-The thesis of this report is to investigate how federated learning can improve
-the predictions of local data points. Thus the baseline model that is used
+The hypothesis of this report is to investigate how federated learning can improve
+the predictions of local models. Thus the baseline model that is used
 is the pure local model where $\alpha = 0$. If there is no meaningful improvement,
 it can be concluded that federated learning doesn't provide any meaningful contribution
 to this specific application.
@@ -303,7 +302,7 @@ not the worse quality of the model.
 The report tested whether federated learning over a geographic or correlation-based
 graph improves next-hour wind speed forecasting. The report used a purely local model
 as the baseline to research the effects of the federated models. When comparing the
-FL models to the baseline, the report found that that both FL systems achieved
+FL models to the baseline, the report found that both FL systems achieved
 negligible improvement over the baseline (\cref{tab:results}), indicating that
 collaboration provided no practical benefit in this setting.
 
