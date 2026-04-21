@@ -24,7 +24,7 @@
 	The goal of this report is to investigate whether federated learning (FL) over
 	a weather station graph improves next-hour wind speed forecasting. The report
 	uses completely independent local models as the baseline and compares them
-	to the FL model using the weather station graphs. As the dateset, the report
+	to the FL model using the weather station graphs. As the dataset, the report
 	uses the Finnish Meteorological Institute (FMI) \cite{FMIOpenData} hourly
 	observation data from 2024.
 
@@ -39,7 +39,7 @@
 	systems achieve negligible improvement over the baseline, with the $\alpha$-sweep
 	selecting a small regularization strength ($\alpha = 0.1$), indicating that
 	strong collaboration is harmful. The result is explained by the local model being
-	already well-specified. The local has an abundance of data (one year) and
+	already well-specified. The local model has an abundance of data (one year) and
 	a simple linear model leaves little room for graph regularization to improve
 	forecasting.
 
@@ -71,7 +71,7 @@ improve their own predictions \cite{McMahan2017, LiWind2023}.
 The objective of this report is to create a federated model that predicts the next-hour
 wind speed from the three previous hours. The report trains a local linear model
 and then creates a FL graph that encodes which stations should influence each other
-during training. The key design question in this report is wether the choice of the
+during training. The key design question in this report is whether the choice of the
 graph topology (geographic vs. correlation-based) meaningfully affect the
 forecasting accuracy.
 
@@ -290,7 +290,7 @@ The main insight from \cref{fig:node-boxplot} is that none of the models are abl
 the test MSE of the outliers. This can be explained by the bigger variation of certain stations.
 The \cref{fig:pred-vs-actual} shows the best fit and the worst fit based on MSE. From the figure,
 there is a clear pattern that the worst fits are caused by more variation in the data,
-not the worse quality of the model. THIS PART IS A BIT SHAKY!! COME BACK TO THIS!!
+not the worse quality of the model.
 
 \section{Conclusion}
 \label{sec:conclusion}
@@ -313,10 +313,7 @@ regularization to help.
 Future work could test more expressive local models (e.g. MLPs), sparser data regimes
 where borrowing from neighbours becomes more valuable. Another interesting future
 direction is wind-flow-aware graph construction that better captures meteorological
-dependencies. SHOULD I REMOVE THE WIND-FLOW-AWARE GRAPH CONSTRUCTION AND COME UP
-WITH SOME OTHER FUTURE DIRECTIONS? I FEEL LIKE THE WIND-FLOW GRAPH WILL NOT IMPROVE
-ON THE LINEAR MODEL. BUT MAYBE IF I REPHRASE IT SO THAT I SUGGEST TRYING ANOTHER LOCAL
-MODEL AND THE WIND-FLOW-AWARE GRAPH CONSTRUCTION.
+dependencies.
 
 
 \bibliographystyle{plain}
