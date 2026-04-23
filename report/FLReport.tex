@@ -154,8 +154,10 @@ $$
 	A_{ij} = \frac{\sum_{t=1}^{T} (y_t^{(i)} - \bar{y}^{(i)})(y_t^{(j)} - \bar{y}^{(j)})}{\sqrt{\sum_{t=1}^{T}(y_t^{(i)} - \bar{y}^{(i)})^2 \sum_{t=1}^{T}(y_t^{(j)} - \bar{y}^{(j)})^2}}.
 $$
 
-This graph construction method should in theory be able to capture meteorological
-similarities beyond just geographical proximity.
+Negative correlations are clipped so the code uses $A_{ij} = \max(0, A_{ij})$, since
+GTVMin penalty requires non-negative edge weights. This graph construction method
+should in theory be able to capture meteorological similarities beyond just geographical
+proximity.
 
 \begin{figure}[t]
 	\centering
