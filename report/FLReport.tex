@@ -100,7 +100,8 @@ forecasts enable grid operators to schedule dispatchable backup generation and
 place intraday electricity marked bids before delivery. For features, the report
 uses lagged wind speeds at times $t - 1, t - 2, t - 3$ and $t - 1$ lagged
 atmospheric pressure, temperature and humidity. The lagged wind speeds are used
-because they are the most direct predictor of the wind speed at time $t$. Pressure
+because they are commonly used as predictors due to the temporal autocorrelation.
+In other words, consecutive time steps are correlated with each other. Pressure
 gradients are what create surface wind thus justifying it as a feature. Temperature
 and humidity don't directly cause wind, but they correlate with large scale weather
 patterns like storms that affect wind speeds.
@@ -111,13 +112,22 @@ For example if there are two weather stations that behave similarly because of s
 geographical features, but one is more north than the other, after normalizing the
 stations will be able to better influence the other stations predictions.
 
+Both features and labels are z-score normalized ($\mu = 0$, $\sigma = 1$) (using only
+the training set. This doesn't leak data into training). Feature normalization
+ensures that no variable dominates the model gradient due to its scale difference
+of physical units. Label normalization also removes each station's mean wind speed,
+preventing the bias term to encode geographic location. For example, with label normalization,
+two different stations from inland and seaside might have similar wind patterns, but
+have different mean wind speeds. After normalizing, these stations can then theoretically
+communicate in GTVMin and improve each others models.
+
 The local model for each station is a simple linear regression:
 
 $$
 	\hat{y}^{(i)} = (\mathbf{w}^{(i)})^\top \mathbf{x}
 $$
 
-Linear is chosen to as the model because only 7 features are used and each station
+A Linear model is chosen as the model because only 7 features are used and each station
 has abundant training data ($\geq 80\%$ of 1 year hourly observations). Because of
 the massive amount of training data, no additional regularization is needed for
 the linear models. The closed-form gradient of the linear model also pairs well
