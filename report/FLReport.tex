@@ -148,13 +148,18 @@ useful for capturing outliers in addition to typical measurements.
 
 This report compares two methods for graph constructions. The first system is based
 on station geography. The first graph construction method connects each station to its
-$k = 5$ nearest neighbors. The distance between two stations is computed using
-Haversine distance to take into account global curving.
+$k = 5$ nearest neighbors. Connecting each station to its five closest neighbors
+creates a small local neighborhood that share similar characteristics.
+The distance between two stations is computed using
+Haversine distance (\cref{eq:geo-weights}) to take into account global curving.
 
 Edges weights in the Geographic k-NN system are also based on the Haversine
-distance
+distancek=5
 
-$$A_{ij} = \exp \left( \frac{-d_{ij}^2}{\sigma^2} \right) $$
+\begin{equation}
+	A_{ij} = \exp \left( \frac{-d_{ij}^2}{\sigma^2} \right)
+	\label{eq:geo-weights}
+\end{equation}
 
 where $\sigma^2$ is the median squared pairwise distance.
 
@@ -166,7 +171,10 @@ $$
 $$
 
 Negative correlations are clipped so the code uses $A_{ij} = \max(0, A_{ij})$, since
-GTVMin penalty requires non-negative edge weights. This graph construction method
+GTVMin penalty requires non-negative edge weights. Even though the local linear models
+use seven features for forecasting, the station correlation is computed only using wind speeds.
+This choice was made because stations that share similar wind speed behavior should have their
+models drawn closer to each other. This graph construction method
 should in theory be able to capture meteorological similarities beyond just geographical
 proximity.
 
@@ -216,6 +224,8 @@ With \cref{eq:mse} and \cref{eq:gtv-penalty} the full GTVMin objective is
 
 where $\alpha$ is the collaboration strength. If $\alpha = 0$, there is no penalty
 for differing models. If $\alpha = \infty$, all stations will share their model.
+So raising the value of $\alpha$ encourages collaboration and decreasing it reduces
+collaboration.
 
 The GTVMin (\cref{eq:gtvmin}) is solved with synchronous federated gradient descent
 (FedGD) \cite{Jung2025}. Using FedGD makes every node update simultaneously. During each iteration,
@@ -239,8 +249,7 @@ During each iteration, node $i$ broadcasts $\mathbf{w}^{(i, t)}$ to all its neig
 and receives $\mathbf{w}^{(j, t)}$ from each neighbor $j \in \mathcal{N}(i)$.
 Then after this, all nodes update simultaneously using the same time step $t$ weights.
 This way the raw data $\mathcal{D}^{(i)}$ never leaves the node $i$. Only the local
-model parameters get shared between stations. The communication cost $2|\mathcal{E}|$
-scales with the number of stations.
+model parameters get shared between stations.
 
 The following hyperparameters are used: All models are initialized with weights
 drawn from $\mathcal{N}(0, 0.01)$ and trained for 750 iterations with learning rate
@@ -273,7 +282,7 @@ This value for $\alpha$ will then be used with both systems to compare their per
 	\label{fig:alpha-sweep}
 \end{figure}
 
-The hypothesis of this report is to investigate how federated learning can improve
+This report investigates how federated learning can improve
 the predictions of local models. Thus the baseline model that is used
 is the pure local model where $\alpha = 0$. If there is no meaningful improvement,
 it can be concluded that federated learning doesn't provide any meaningful contribution
