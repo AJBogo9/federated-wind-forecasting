@@ -95,14 +95,15 @@ train the network on. The station distribution is also well divided geographical
 over all of Finland (\cref{fig:topology}) so no geographical biases are introduced by
 this filtering step.
 
-Our local models forecast the next-hour wind speed at station $i$. Knowing the
-wind speed in the future is useful for planning other more controllable energy
-production (fossil fuel-based energy). For features, the report uses lagged wind speeds
-at times $t - 1, t - 2, t - 3$ and $t - 1$ lagged atmospheric pressure, temperature and
-humidity. The lagged wind speeds are used because they are the most direct predictor
-of the wind speed at time $t$. Pressure gradients are what create surface wind thus
-justifying it as a feature. Temperature and humidity don't directly cause wind, but
-they correlate with large scale weather patterns like storms that affect wind speeds.
+Our local models forecast the next-hour wind speed at station $i$. The next-hour
+forecasts enable grid operators to schedule dispatchable backup generation and
+place intraday electricity marked bids before delivery. For features, the report
+uses lagged wind speeds at times $t - 1, t - 2, t - 3$ and $t - 1$ lagged
+atmospheric pressure, temperature and humidity. The lagged wind speeds are used
+because they are the most direct predictor of the wind speed at time $t$. Pressure
+gradients are what create surface wind thus justifying it as a feature. Temperature
+and humidity don't directly cause wind, but they correlate with large scale weather
+patterns like storms that affect wind speeds.
 
 Both features and labels are z-score normalized ($\mu = 0, \sigma = 1$) using only
 the training set statistics. By normalizing we are able to create better predictions.
