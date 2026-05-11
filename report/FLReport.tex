@@ -11,7 +11,7 @@
 \input{ml_macros.tex}
 \graphicspath{{../figures/}}
 
-\title{Federated Wind Speed Forecasting over Finland}
+\title{Federated Wind Speed Forecasting in Finland: Geographic vs.\ Correlation Graphs with Synchronous FedGD}
 \name{}
 \address{}
 
@@ -33,7 +33,7 @@
 	creates $k$ edges between the $k$ geographically closest nodes. The second
 	topology is the correlation k-NN. In this graph, nodes have edges between their
 	$k$ most highly correlated (similar) neighbors. Then the FL systems are trained
-	with FedGD \cite{McMahan2017} and compared with each other.
+	with FedGD \cite{Jung2025} and compared with each other.
 
 	After training the baseline and both FL models, the report finds that both FL
 	systems achieve negligible improvement over the baseline, with the $\alpha$-sweep
@@ -78,56 +78,54 @@ during training. The key design question in this report is whether the choice of
 graph topology (geographic vs. correlation-based) meaningfully affects the
 forecasting accuracy.
 
-The report's thesis is investigated in the following manner. Section 2 introduces
-the federated learning problem, defines the networks, features and loss function. Then
-section 3 describes the GTVMin objective and FedGD algorithm. Section 4 presents
-the results from running the code. The results section compares both graph topologies
-to the baseline. Finally section 5 concludes the report with thoughts on the
-results of the report and future research directions.
+Section 2 defines the FL problem, features, and graph topologies. Section 3 describes
+the GTVMin objective and FedGD algorithm. Section 4 presents and discusses the results.
+Section 5 concludes.
 
 \section{Problem Formulation}
 \label{sec:pf}
 
-In the FL graph, each node is one FMI weather station. From all the stations that
-were returned from the API call, all with less than 80\% hourly completeness over 2024
-are excluded. Excluding these stations, there are still about 50 stations left to
-train the network on. The station distribution is also well divided geographically
+In the FL graph, each node is one FMI weather station. All stations with less than
+80\% hourly completeness over 2024 are excluded, leaving 136 stations to train the
+network on. The station distribution is also well divided geographically
 over all of Finland (\cref{fig:topology}) so no geographical biases are introduced by
 this filtering step.
 
-Our local models forecast the next-hour wind speed at station $i$. The next-hour
-forecasts enable grid operators to schedule dispatchable backup generation and
-place intraday electricity marked bids before delivery. For features, the report
-uses lagged wind speeds at times $t - 1, t - 2, t - 3$ and $t - 1$ lagged
-atmospheric pressure, temperature and humidity. The lagged wind speeds are used
+Our local models forecast the next-hour wind speed at station $i$. Formally, the
+prediction label is $y^{(i)}_t = ws^{(i)}_{t+1}$, the wind speed one hour ahead.
+The next-hour forecasts enable grid operators to schedule dispatchable backup
+generation and place intraday electricity marked bids before delivery. For
+features, the report uses lagged wind speeds at times $t - 1, t - 2, t - 3$
+and $t - 1$ lagged atmospheric pressure, temperature and humidity:
+
+$$
+	\mathbf{x}^{(i)}_t = \bigl[ws^{(i)}_{t-3},\ ws^{(i)}_{t-2},\ ws^{(i)}_{t-1},\ ta^{(i)}_{t-1},\ rh^{(i)}_{t-1},\ pa^{(i)}_{t-1}\bigr]^\top \in \mathbb{R}^6,
+$$
+where $ws$ (m/s) is wind speed, $ta$ (°C) air temperature, $rh$ (\%) relative
+humidity, and $pa$ (hPa) atmospheric pressure. The lagged wind speeds are used
 because they are commonly used as predictors due to the temporal autocorrelation.
 In other words, consecutive time steps are correlated with each other. Pressure
 gradients are what create surface wind thus justifying it as a feature. Temperature
 and humidity don't directly cause wind, but they correlate with large scale weather
 patterns like storms that affect wind speeds.
 
-Both features and labels are z-score normalized ($\mu = 0, \sigma = 1$) using only
-the training set statistics. By normalizing we are able to create better predictions.
-For example if there are two weather stations that behave similarly because of similar
-geographical features, but one is more north than the other, after normalizing the
-stations will be able to better influence the other stations predictions.
-
-Both features and labels are z-score normalized ($\mu = 0$, $\sigma = 1$) (using only
-the training set. This doesn't leak data into training). Feature normalization
+Both features and labels are z-score normalized ($\mu = 0$, $\sigma = 1$) using only
+the training set statistics (so no validation or test data leaks into training). Feature normalization
 ensures that no variable dominates the model gradient due to its scale difference
 of physical units. Label normalization also removes each station's mean wind speed,
 preventing the bias term to encode geographic location. For example, with label normalization,
 two different stations from inland and seaside might have similar wind patterns, but
 have different mean wind speeds. After normalizing, these stations can then theoretically
-communicate in GTVMin and improve each others models.
+communicate in GTVMin \cite{SarcheshmehPour2023} (defined in \cref{sec:meth}) and improve each other's models.
 
 The local model for each station is a simple linear regression:
 
 $$
-	\hat{y}^{(i)} = (\mathbf{w}^{(i)})^\top \mathbf{x}
+	\hat{y}^{(i)}_t = (\mathbf{w}^{(i)})^\top \tilde{\mathbf{x}}^{(i)}_t, \quad \mathbf{w}^{(i)} \in \mathbb{R}^7,
 $$
+where $\tilde{\mathbf{x}}^{(i)}_t = [\mathbf{x}^{(i)\top}_t, 1]^\top$ is the feature vector augmented with a bias term.
 
-A Linear model is chosen as the model because only 7 features are used and each station
+A linear model is chosen because only 6 features are used and each station
 has abundant training data ($\geq 80\%$ of 1 year hourly observations). Because of
 the massive amount of training data, no additional regularization is needed for
 the linear models. The closed-form gradient of the linear model also pairs well
@@ -150,18 +148,19 @@ This report compares two methods for graph constructions. The first system is ba
 on station geography. The first graph construction method connects each station to its
 $k = 5$ nearest neighbors. Connecting each station to its five closest neighbors
 creates a small local neighborhood that share similar characteristics.
-The distance between two stations is computed using
-Haversine distance (\cref{eq:geo-weights}) to take into account global curving.
+The distance between two stations is computed using the Haversine formula
+\cite{Sinnott1984}, which accounts for the curvature of the Earth.
 
-Edges weights in the Geographic k-NN system are also based on the Haversine
-distancek=5
+Edge weights in the Geographic k-NN system are assigned using a Gaussian kernel
+applied to the pairwise Haversine distances:
 
 \begin{equation}
 	A_{ij} = \exp \left( \frac{-d_{ij}^2}{\sigma^2} \right)
 	\label{eq:geo-weights}
 \end{equation}
 
-where $\sigma^2$ is the median squared pairwise distance.
+where $d_{ij}$ is the Haversine distance between stations $i$ and $j$, and
+$\sigma^2$ is the median squared pairwise distance (a data-adaptive bandwidth).
 
 System 2 connects each station to its $k = 5$ most correlated neighbours. The
 correlation is measured with Pearson correlation on 2024 wind speed series:
@@ -171,8 +170,8 @@ $$
 $$
 
 Negative correlations are clipped so the code uses $A_{ij} = \max(0, A_{ij})$, since
-GTVMin penalty requires non-negative edge weights. Even though the local linear models
-use seven features for forecasting, the station correlation is computed only using wind speeds.
+GTVMin \cite{SarcheshmehPour2023} penalty requires non-negative edge weights. Even though the local linear models
+use six features for forecasting, the station correlation is computed only using wind speeds.
 This choice was made because stations that share similar wind speed behavior should have their
 models drawn closer to each other. This graph construction method
 should in theory be able to capture meteorological similarities beyond just geographical
@@ -204,7 +203,7 @@ proximity.
 \section{Methodology}
 \label{sec:meth}
 
-The graph total variation (GTV) \cite{SarcheshmehPour2023} penalty uses the squared $\ell2$ norm
+The graph total variation (GTV) \cite{SarcheshmehPour2023} penalty uses the squared $\ell_2$ norm
 
 \begin{equation}
 	\|\mathbf{w}^{(i)} - \mathbf{w}^{(j)}\|^2
@@ -212,8 +211,12 @@ The graph total variation (GTV) \cite{SarcheshmehPour2023} penalty uses the squa
 \end{equation}
 
 to measure disagreement between neighboring stations' parameters. The squared $\ell_2$
-norm is chosen over an $\ell_1$-based penalty because the $\ell_2$ is smooth and convex,
-giving a closed-form gradient that pairs well with the FedGD algorithm.
+norm is chosen over an $\ell_1$-based penalty for three reasons. First, it is smooth
+and convex everywhere, giving a closed-form gradient that pairs directly with the FedGD
+update rule. Second, it penalizes large disagreements quadratically, encouraging tight
+parameter agreement rather than merely bounded spread. Third, adding a strictly convex
+penalty to the sum of convex local losses makes the full GTVMin objective strongly
+convex for $\alpha > 0$, guaranteeing a unique global minimizer.
 
 With \cref{eq:mse} and \cref{eq:gtv-penalty} the full GTVMin objective is
 
@@ -240,16 +243,9 @@ the weights are updated by
 	\label{eq:fedgd}
 \end{equation*}
 
-The first term is the gradient of the MSE of the local model. This term pulls the
-model toward fitting the station's own data. The second term is the weighted
-disagreement with neighbors (\cref{fig:topology}). This term pulls the local model
-toward agreement with similar neighboring stations.
-
-During each iteration, node $i$ broadcasts $\mathbf{w}^{(i, t)}$ to all its neighbors
-and receives $\mathbf{w}^{(j, t)}$ from each neighbor $j \in \mathcal{N}(i)$.
-Then after this, all nodes update simultaneously using the same time step $t$ weights.
-This way the raw data $\mathcal{D}^{(i)}$ never leaves the node $i$. Only the local
-model parameters get shared between stations.
+Each iteration, node $i$ broadcasts $\mathbf{w}^{(i,t)}$ to its neighbours and receives
+theirs; all nodes then update simultaneously. The raw data $\mathcal{D}^{(i)}$ never
+leaves node $i$ -- only model parameters are shared.
 
 The following hyperparameters are used: All models are initialized with weights
 drawn from $\mathcal{N}(0, 0.01)$ and trained for 750 iterations with learning rate
@@ -258,11 +254,17 @@ $\eta = 0.01$. For the $\alpha$-sweep, 300 iterations are used per candidate val
 \section{Numerical Experiments}
 \label{sec:experiments}
 
-As data, the report uses FMI Open Data \cite{FMIOpenData} hourly observations throughout 2024.
-The station data is fetched and then cleaned and processed. The biggest processing step
-is filtering all stations that don't have at least 80\% data completeness. After this filtering
-there are 50 stations left for building the FL graph. The relevant features from the API are
-wind speed, temperature, humidity and atmospheric pressure.
+As data, the report uses FMI Open Data \cite{FMIOpenData} hourly observations for the
+full calendar year 2024, fetched via the WFS \texttt{fmi::observations::weather::hourly::simple}
+stored query with a bounding box covering Finland (lat $59.5$--$70.2$°N, lon $19.0$--$31.6$°E).
+The four variables used are hourly mean wind speed (\texttt{ws\_pt1h\_avg}), air temperature
+(\texttt{ta\_pt1h\_avg}), relative humidity (\texttt{rh\_pt1h\_avg}), and atmospheric pressure
+(\texttt{pa\_pt1h\_avg}). Stations with fewer than 80\% of the 8\,784 possible hourly
+wind speed observations present are excluded, leaving 165 stations. After feature
+construction and dropping rows with remaining missing values, 136 stations have
+sufficient data and form the final FL graph.
+Small gaps of up to two consecutive hours are filled by linear interpolation before
+feature construction; larger gaps are left as missing and the affected rows dropped.
 
 The data set is split into a training, validation and test split. With time series data,
 the split has to retain chronological order so that future data is not informed by past
@@ -282,11 +284,7 @@ This value for $\alpha$ will then be used with both systems to compare their per
 	\label{fig:alpha-sweep}
 \end{figure}
 
-This report investigates how federated learning can improve
-the predictions of local models. Thus the baseline model that is used
-is the pure local model where $\alpha = 0$. If there is no meaningful improvement,
-it can be concluded that federated learning doesn't provide any meaningful contribution
-to this specific application.
+The baseline is the purely local model ($\alpha = 0$).
 
 \input{results_table}
 
@@ -344,10 +342,17 @@ The negative result is because of the simplicity of the local model. A 7-paramet
 linear regression trained on abundant local data leaves little room for graph
 regularization to help.
 
-Future work could test more expressive local models (e.g. MLPs), sparser data regimes
-where borrowing from neighbours becomes more valuable. Another interesting future
-direction is wind-flow-aware graph construction that better captures meteorological
-dependencies.
+Several directions could extend this work:
+\begin{itemize}
+	\item \textbf{More expressive local models.} A shallow MLP or LSTM would introduce
+	      non-linearities a linear model cannot capture, giving graph regularization more
+	      room to improve performance.
+	\item \textbf{Sparser data regimes.} With shorter records or higher missingness,
+	      borrowing from neighbours becomes more valuable.
+	\item \textbf{Wind-flow-aware graph construction.} A directed graph based on
+	      prevailing wind directions could capture asymmetric weather-front propagation
+	      that symmetric k-NN graphs miss.
+\end{itemize}
 
 
 \bibliographystyle{plain}

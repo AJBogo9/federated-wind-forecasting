@@ -102,12 +102,13 @@ Section 5 concludes with a discussion of findings and limitations.
 ```{python}
 #| label: load-data
 #| cache: true
-from data import fetch_wind_data, get_station_index, build_node_datasets, init_weights, MIN_COMPLETENESS, TRAIN_FRAC, VAL_FRAC
+from data import fetch_wind_data, get_station_index, build_node_datasets, init_weights, fetch_station_names, MIN_COMPLETENESS, TRAIN_FRAC, VAL_FRAC
 
 df = fetch_wind_data(cache_path=Path("../data/wind_2024.csv"))
 stations = get_station_index(df)
 datasets = build_node_datasets(df, stations)
 init_w = init_weights(datasets)
+station_name_map = fetch_station_names(stations, cache_path=Path("../data/station_names.json"))
 ```
 
 ```{python}
@@ -431,8 +432,7 @@ fig.update_yaxes(title_text="Count", col=1)
 fig.update_layout(
     height=300,
     showlegend=False,
-    margin=dict(t=50, b=40),
-    title_text="Figure 4: Distribution of edge weights for both graph systems.",
+    margin=dict(t=30, b=40),
 )
 show(fig, save_as="edge_weights.pdf")
 ```
@@ -581,7 +581,7 @@ if sweep_available:
     fig.add_vline(x=corr_best_alpha, line=dict(color="darkorange", dash="dash", width=1.5),
                   annotation_text=f"α*={corr_best_alpha}", annotation_position="top left")
     fig.update_xaxes(title_text="α (regularisation strength)", type="log")
-    fig.update_yaxes(title_text="Mean validation MSE (normalised, z-scored targets)")
+    fig.update_yaxes(title_text="Mean validation MSE (normalised)")
     fig.update_layout(
         height=380,
         legend=dict(orientation="h", y=-0.25),
@@ -666,7 +666,7 @@ if results_available:
                       annotation_position="right")
 
     fig.update_xaxes(title_text="Iteration")
-    fig.update_yaxes(title_text="Mean validation MSE (normalised, z-scored targets)")
+    fig.update_yaxes(title_text="Mean validation MSE (normalised)")
     fig.update_layout(
         height=420,
         legend=dict(orientation="h", y=-0.25),
@@ -701,8 +701,8 @@ if results_available:
         rows.append({
             "Station": node,
             "Baseline": _mse(X_test, y_test, base_weights[node]) if node in base_weights else np.nan,
-            "System 1 — Geo": _mse(X_test, y_test, geo_weights[node]) if node in geo_weights else np.nan,
-            "System 2 — Corr": _mse(X_test, y_test, corr_weights[node]) if node in corr_weights else np.nan,
+            "System 1 (Geo)": _mse(X_test, y_test, geo_weights[node]) if node in geo_weights else np.nan,
+            "System 2 (Corr)": _mse(X_test, y_test, corr_weights[node]) if node in corr_weights else np.nan,
         })
 
     node_df = pd.DataFrame(rows).set_index("Station")
@@ -714,8 +714,8 @@ if results_available:
 #| label: node-boxplot
 if results_available and len(rows) > 0:
     fig = go.Figure()
-    for col, colour in [("Baseline", "grey"), ("System 1 — Geo", "steelblue"),
-                         ("System 2 — Corr", "darkorange")]:
+    for col, colour in [("Baseline", "grey"), ("System 1 (Geo)", "steelblue"),
+                         ("System 2 (Corr)", "darkorange")]:
         fig.add_trace(go.Box(
             y=node_df[col].dropna(),
             name=col,
@@ -724,9 +724,8 @@ if results_available and len(rows) > 0:
         ))
     fig.update_yaxes(title_text="Test MSE (normalised)")
     fig.update_layout(
-        title="Figure 7: Distribution of per-node test MSE (normalised) across all stations.",
         height=380,
-        margin=dict(t=50, b=30),
+        margin=dict(t=30, b=30),
     )
     show(fig, save_as="node_boxplot.pdf")
 ```
@@ -791,14 +790,17 @@ if results_available:
 #| label: scatter-pred-actual
 if results_available and len(rows) > 0:
     # Pick best and worst test-MSE stations for System 1
-    node_df_sorted = node_df.sort_values("System 1 — Geo")
+    node_df_sorted = node_df.sort_values("System 1 (Geo)")
     best_node  = node_df_sorted.index[0]
     worst_node = node_df_sorted.index[-1]
 
+    best_name  = station_name_map.get(best_node, best_node)
+    worst_name = station_name_map.get(worst_node, worst_node)
+
     fig = make_subplots(rows=1, cols=2,
         subplot_titles=[
-            f"Best station: {best_node}<br>(test MSE={node_df.loc[best_node,'System 1 — Geo']:.3f})",
-            f"Worst station: {worst_node}<br>(test MSE={node_df.loc[worst_node,'System 1 — Geo']:.3f})",
+            f"Best: {best_name}<br>(test MSE={node_df.loc[best_node,'System 1 (Geo)']:.3f})",
+            f"Worst: {worst_name}<br>(test MSE={node_df.loc[worst_node,'System 1 (Geo)']:.3f})",
         ])
 
     for col_idx, (node, system_w) in enumerate([
@@ -827,8 +829,7 @@ if results_available and len(rows) > 0:
     fig.update_yaxes(title_text="Predicted ws_{t+1} (m/s)", col=1)
     fig.update_layout(
         height=380,
-        title_text="Figure 8: Actual vs. predicted wind speed — System 1 (Geographic).",
-        margin=dict(t=80, b=30),
+        margin=dict(t=60, b=30),
     )
     show(fig, save_as="pred_vs_actual.pdf")
 ```

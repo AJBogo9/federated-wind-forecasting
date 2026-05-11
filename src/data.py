@@ -42,6 +42,7 @@ VAL_FRAC: Final[float] = 0.15
 # FMI WFS API endpoint
 _FMI_WFS_URL: Final[str] = "https://opendata.fmi.fi/wfs"
 _STORED_QUERY: Final[str] = "fmi::observations::weather::hourly::simple"
+_STATION_META_QUERY: Final[str] = "fmi::ef::stations"
 
 # Variables to fetch (FMI parameter names)
 _PARAMS: Final[str] = "ws_pt1h_avg,ta_pt1h_avg,rh_pt1h_avg,pa_pt1h_avg"
@@ -225,6 +226,96 @@ def _fetch_chunk(start_dt: datetime, end_dt: datetime, retries: int = 3) -> pd.D
             time.sleep(2 ** attempt)
     # unreachable
     return pd.DataFrame()
+
+
+def _parse_station_names_xml(xml_text: str) -> dict[str, str]:
+    """Parse FMI ef::stations XML into a coord-key -> name mapping.
+
+    Matches on f"{lat:.5f}_{lon:.5f}" keys, the same format used by
+    _parse_fmi_xml so the two dicts can be joined directly.
+    """
+    import xml.etree.ElementTree as ET
+
+    NS_GML = "http://www.opengis.net/gml/3.2"
+    NS_EF = "http://inspire.ec.europa.eu/schemas/ef/4.0"
+    NS_SF = "http://inspire.ec.europa.eu/schemas/sf/4.0"
+
+    root = ET.fromstring(xml_text)
+    result: dict[str, str] = {}
+
+    for facility in root.iter(f"{{{NS_EF}}}EnvironmentalMonitoringFacility"):
+        name_el = facility.find(f"{{{NS_GML}}}name")
+        pos_el = facility.find(
+            f".//{{{NS_EF}}}representativePoint//{{{NS_GML}}}pos"
+        )
+        if name_el is None or pos_el is None:
+            continue
+
+        name = (name_el.text or "").strip()
+        parts = (pos_el.text or "").strip().split()
+        if len(parts) < 2 or not name:
+            continue
+
+        try:
+            lat, lon = float(parts[0]), float(parts[1])
+        except ValueError:
+            continue
+
+        key = f"{lat:.5f}_{lon:.5f}"
+        result[key] = name
+
+    return result
+
+
+def fetch_station_names(
+    stations: pd.DataFrame,
+    cache_path: Path = Path("data/station_names.json"),
+    force: bool = False,
+) -> dict[str, str]:
+    """Return a mapping from coordinate station ID to human-readable FMI station name.
+
+    Fetches the FMI ef::stations metadata endpoint once, matches each station
+    by its rounded lat/lon key, and caches the result as JSON. Falls back to
+    the coordinate ID string if a name cannot be resolved.
+
+    Parameters
+    ----------
+    stations:
+        Station index from ``get_station_index`` (index = coord station IDs).
+    cache_path:
+        JSON file to cache the name mapping.
+    force:
+        If True, re-fetch even when the cache exists.
+    """
+    import json
+
+    cache_path = Path(cache_path)
+
+    if cache_path.exists() and not force:
+        with open(cache_path) as f:
+            cached: dict[str, str] = json.load(f)
+        # Return only stations we actually use, fill missing with coord ID
+        return {s: cached.get(s, s) for s in stations.index}
+
+    url = (
+        f"{_FMI_WFS_URL}?service=WFS&version=2.0.0"
+        f"&request=getFeature&storedquery_id={_STATION_META_QUERY}"
+    )
+    try:
+        resp = requests.get(url, timeout=60)
+        resp.raise_for_status()
+        name_map = _parse_station_names_xml(resp.text)
+    except Exception as exc:
+        print(f"Warning: could not fetch station names ({exc}). Using coord IDs.")
+        return {s: s for s in stations.index}
+
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(cache_path, "w") as f:
+        json.dump(name_map, f, indent=2, ensure_ascii=False)
+
+    matched = sum(1 for s in stations.index if s in name_map)
+    print(f"Station names: {matched}/{len(stations.index)} matched from FMI metadata.")
+    return {s: name_map.get(s, s) for s in stations.index}
 
 
 # ---------------------------------------------------------------------------
