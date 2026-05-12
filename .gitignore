@@ -24,6 +24,8 @@ notebooks/presentation.html
 notebooks/presentation_files/
 notebooks/.jupyter_cache/
 notebooks/_freeze/
+presentation/presentation_files/
+presentation/presentation.html
 *.quarto_ipynb
 *.quarto_ipynb_*
 

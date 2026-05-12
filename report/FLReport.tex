@@ -86,8 +86,9 @@ Section 5 concludes.
 \label{sec:pf}
 
 In the FL graph, each node is one FMI weather station. All stations with less than
-80\% hourly completeness over 2024 are excluded, leaving 136 stations to train the
-network on. The station distribution is also well divided geographically
+80\% hourly completeness over 2024 are excluded, leaving 165 stations. After feature
+construction, 29 stations that lack data for one or more non-wind variables are also
+excluded, leaving 136 stations to train the network on. The station distribution is also well divided geographically
 over all of Finland (\cref{fig:topology}) so no geographical biases are introduced by
 this filtering step.
 

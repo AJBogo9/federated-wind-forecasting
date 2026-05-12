@@ -1,0 +1,261 @@
+---
+title: "Federated Wind Speed Forecasting in Finland"
+subtitle: "Geographic vs. Correlation Graphs with Synchronous FedGD"
+format:
+  revealjs:
+    theme: night
+    slide-number: true
+    transition: none
+    fig-align: center
+    width: 1280
+    height: 720
+    margin: 0.05
+    smaller: true
+    progress: false
+    css: style.css
+---
+
+## Introduction
+
+**Wind energy in Finland is growing fast**
+
+- In 2024, wind produced **24% of Finland's electricity**
+- Grid operators need accurate short-term forecasts for scheduling
+
+**Why federated learning?**
+
+- Raw station data may be commercially sensitive: centralized training is not always possible
+- Stations share weather patterns; neighbors could help each other learn better models
+- FL enables collaboration **without sharing raw data**
+
+**Gap:** FL for wind speed over dense public meteorological networks is largely unexplored.
+Prior work (Li et al., 2023) focuses on small private wind farm networks.
+
+**Question:** Does collaborating over a station graph improve next-hour wind speed forecasts?
+
+::: {.notes}
+- grid operators can burn coal or other non-renewable energy sources based on predicted demand.
+:::
+
+---
+
+## Problem Formulation
+
+**Each node = one FMI weather station** (136 stations, filtered to ≥80% hourly completeness)
+
+**Prediction target:** Next-hour wind speed $\hat{y}^{(i)}_t = ws^{(i)}_{t+1}$
+
+**Features** (6 per station):
+
+$$\mathbf{x}^{(i)}_t = \bigl[ws_{t-3},\ ws_{t-2},\ ws_{t-1},\ ta_{t-1},\ rh_{t-1},\ pa_{t-1}\bigr]^\top$$
+
+Lagged wind speeds capture temporal autocorrelation; pressure gradients drive surface wind; temperature and humidity correlate with large-scale weather patterns like storms
+
+**Local model:** Linear regression $\hat{y} = \mathbf{w}^{(i)\top} \tilde{\mathbf{x}}$, $\mathbf{w}^{(i)} \in \mathbb{R}^7$: chosen because each station has abundant data and only 6 features
+
+**Loss: MSE:** differentiable everywhere, closed-form gradient, penalizes large errors quadratically
+
+Both features and labels are **z-score normalized** using training statistics only
+
+::: {.notes}
+- Each node is one FMI station; filtered to 136 stations with at least 80% completeness
+- Target: next-hour wind speed
+- 6 features: 3 lagged wind speeds (temporal autocorrelation) + pressure, temperature, humidity
+- Linear model: justified by abundant data (6,000+ hours) and only 6 features
+- MSE: differentiable, closed-form gradient, quadratic penalty on large errors
+- Z-score normalization using training stats only; prevents data leakage
+:::
+
+---
+
+## Graph Topologies
+
+:::: {.columns}
+
+::: {.column width="50%"}
+**System 1: Geographic k-NN**
+
+Connect each station to its $k=5$ closest neighbors (Haversine distance)
+
+Edge weights via Gaussian kernel: closer stations get stronger weights:
+$$A_{ij} = \exp\!\left(\frac{-d_{ij}^2}{\sigma^2}\right)$$
+:::
+
+::: {.column width="50%"}
+**System 2: Correlation k-NN**
+
+Connect each station to its $k=5$ most correlated neighbors (Pearson on 2024 wind speeds)
+
+Raw correlation as edge weight: captures meteorological similarity beyond geography:
+$$A_{ij} = \text{corr}(ws^{(i)}, ws^{(j)}),\quad A_{ij} \geq 0$$
+:::
+
+::::
+
+::: {.notes}
+- System 1: connect to 5 geographically closest neighbors; Gaussian weights favor closer stations
+- System 2: connect to 5 most correlated neighbors by Pearson correlation on wind speeds
+- Correlation can capture meteorological similarity beyond geography (e.g. two distant coastal stations)
+:::
+
+---
+
+## Graph Topologies
+
+:::: {.columns}
+::: {.column width="50%"}
+**System 1: Geographic k-NN**
+
+![](figures/topology_geo-1.png){width=60%}
+:::
+::: {.column width="50%"}
+**System 2: Correlation k-NN**
+
+![](figures/topology_corr-1.png){width=60%}
+:::
+::::
+
+::: {.notes}
+- Geographic graph: tight local clusters across Finland
+- Correlation graph: some longer-range edges, especially between coastal stations
+- Both graphs cover Finland well: no geographic bias from the filtering step
+:::
+
+---
+
+## Data
+
+**Source:** FMI Open Data, hourly observations for all of 2024
+
+**Variables:** wind speed, air temperature, relative humidity, atmospheric pressure
+
+**Quality filter:** 202 FMI stations, filtered to $\geq 80\%$ hourly completeness: 165 stations remain
+
+- Small gaps ($\leq 2$ h) filled by linear interpolation; larger gaps dropped
+- 29 stations lack data for one or more non-wind variables entirely and are excluded: **136 stations**
+
+**Chronological train/val/test split** (no data leakage):
+
+| Split | Fraction | Purpose |
+|-------|----------|---------|
+| Train | 70% | Fit model weights |
+| Validation | 15% | Select $\alpha$ |
+| Test | 15% | Final evaluation |
+
+::: {.notes}
+- FMI Open Data: 4 variables, hourly, full year 2024
+- 136 stations after 80% completeness filter
+- Short gaps interpolated; longer gaps dropped
+- Chronological split: shuffling would leak future data into training
+- Validation set used only for selecting alpha
+:::
+
+---
+
+## Methodology: GTVMin + FedGD
+
+**GTVMin objective:** balance local fit vs. inter-station agreement:
+
+$$\min_{\mathbf{w}^{(1)},\dots,\mathbf{w}^{(n)}} \sum_{i=1}^{n} L_i(\mathbf{w}^{(i)}) + \alpha \sum_{(i,j)\in\mathcal{E}} A_{ij} \|\mathbf{w}^{(i)} - \mathbf{w}^{(j)}\|^2$$
+
+GTV penalty uses squared $\ell_2$ norm: smooth, closed-form gradient, strongly convex for $\alpha > 0$
+
+**FedGD update** (synchronous, all nodes update simultaneously):
+
+$$\mathbf{w}^{(i)} \leftarrow \mathbf{w}^{(i)} - \eta\Bigl[\color{#f39c12}{\nabla L_i(\mathbf{w}^{(i)})} + \color{#1abc9c}{2\alpha \sum_{j \in \mathcal{N}(i)} A_{ij}\left(\mathbf{w}^{(i)} - \mathbf{w}^{(j)}\right)}\Bigr]$$
+
+- [local gradient]{style="color: #f39c12;"}: pull weights toward the station's own data
+- [disagreement penalty]{style="color: #1abc9c;"}: pull weights toward neighbors, weighted by edge strength
+
+Only **model parameters** are shared; raw data never leaves the node
+
+Hyperparameters: $\eta = 0.01$, 750 iterations, $\mathbf{w}^{(i)}_0 \sim \mathcal{N}(0, 0.01)$
+
+::: {.notes}
+- GTVMin: local MSE loss + graph total variation penalty on parameter disagreement
+- Squared L2 norm: smooth, closed-form gradient, strongly convex (unique minimizer)
+- FedGD: first highlight the local gradient term, then the disagreement term
+- All nodes update simultaneously; only weights are communicated, not raw data
+:::
+
+---
+
+## Selecting $\alpha$
+
+![](figures/alpha_sweep-1.png){width=55%}
+
+Both systems select $\alpha^* = 0.1$: **weak collaboration is optimal**
+
+Strong collaboration ($\alpha \geq 1$) hurts: local models are already well-specified
+
+::: {.notes}
+- Sweep over alpha candidates using validation MSE
+- Both systems pick alpha = 0.1: only weak collaboration helps
+- Performance degrades at alpha >= 1: a first sign local models don't need neighbors
+:::
+
+---
+
+## Results
+
+| System | $\alpha$ | Train MSE | Val MSE | Test MSE |
+|---|---|---|---|---|
+| Baseline ($\alpha=0$) | 0.00 | 0.2345 | 0.2381 | 0.2638 |
+| System 1 (Geographic) | 0.10 | 0.2347 | 0.2377 | 0.2630 |
+| System 2 (Correlation) | 0.10 | 0.2349 | 0.2377 | **0.2628** |
+
+All three systems perform nearly identically: FL provides negligible improvement
+
+:::: {.columns}
+::: {.column width="50%"}
+![](figures/convergence-1.png){width=80%}
+:::
+::: {.column width="50%"}
+![](figures/node_boxplot-1.png){width=80%}
+:::
+::::
+
+::: {.notes}
+- All three systems achieve nearly identical test MSE; improvement is ~0.001
+- Convergence curves: all systems converge smoothly to the same level
+- Boxplot: FL neither rescues worst-performing stations nor degrades the best
+:::
+
+---
+
+## Per-Station Analysis
+
+![](figures/pred_vs_actual-1.png){width=55%}
+
+- Worst-fitting stations have **higher wind speed variability**, not worse models
+- FL neither rescues outlier stations nor degrades the best-performing ones
+
+::: {.notes}
+- Scatter in predictions comes from high wind speed variability, not model failure
+- FL cannot fix this: it is a data characteristic, not a modeling problem
+:::
+
+---
+
+## Conclusion
+
+**FL provided no practical benefit** over the local baseline in this setting
+
+**Why?** The local model is already well-specified:
+
+- 136 stations x ~6,000 training hours = abundant local data
+- A 7-parameter linear model (6 features + bias) leaves little room for graph regularization to help
+- $\alpha = 0.1$ confirms that strong collaboration is harmful
+
+**Limitations and future directions:**
+
+- Linear models may be too simple: try shallow MLP or LSTM local models
+- A full year of data reduces the value of borrowing: test in sparser data regimes
+- Symmetric k-NN graphs miss asymmetric propagation: try wind-flow-aware directed graphs
+
+::: {.notes}
+- Both FL systems gave negligible improvement over the local baseline
+- Root cause: abundant data + simple linear model = already well-specified locally
+- Alpha = 0.1 confirms neighbors add little value
+- Each limitation points directly to a future direction
+:::

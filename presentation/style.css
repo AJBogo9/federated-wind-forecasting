@@ -1,0 +1,4 @@
+.reveal h2 { font-size: 1.4em; }
+.reveal p, .reveal li { font-size: 0.85em; }
+.reveal table { font-size: 0.8em; }
+.reveal .columns { gap: 1em; }
