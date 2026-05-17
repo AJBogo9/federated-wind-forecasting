@@ -29,6 +29,13 @@ presentation/presentation.html
 *.quarto_ipynb
 *.quarto_ipynb_*
 
+# Video
+*.mkv
+*.mp4
+*.mov
+*.avi
+*.webm
+
 # Data
 data/
 *.bbl
