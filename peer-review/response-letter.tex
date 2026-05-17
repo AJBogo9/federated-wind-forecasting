@@ -20,18 +20,16 @@
 \begin{document}
 
 \begin{center}
-    {\bf\Large Response to the Reviewer Comments on Manuscript}\\[2mm]
-    {\bf\Large ``Federated Wind Speed Forecasting in Finland: Geographic vs.\ Correlation Graphs with Synchronous FedGD''}\\[7mm]
-    {\em\large corresponding author: Anonymous}\\[6.0mm]
-    \today
+      {\bf\Large Response to the Reviewer Comments on Manuscript}\\[2mm]
+      {\bf\Large ``Federated Wind Speed Forecasting in Finland: Geographic vs.\ Correlation Graphs with Synchronous FedGD''}\\[7mm]
+      {\em\large corresponding author: Anonymous}\\[6.0mm]
+      \today
 \end{center}
 
 \vspace{7mm}
 
 We thank the reviewers and the teaching assistant for their constructive and detailed feedback.
 We have addressed all raised issues in the revised manuscript.
-Modifications in the revised manuscript are highlighted in red.
-
 \vspace{2mm}
 
 Major modifications include:
@@ -39,19 +37,10 @@ Major modifications include:
 \vspace{2mm}
 
 \begin{itemize}
-
-    \item The report title was revised to convey the main idea (comparing graph structures),
-          the application domain (wind speed forecasting in Finland), and the methods (FL with synchronous FedGD).
-
-    \item All in-plot figure numbers were corrected to match their caption labels, center-aligned,
-          and redundant overlapping titles were removed.
-
-    \item The feature count was corrected from 7 to 6, the prediction label was formally defined
-          with mathematical notation, and additional justification for the squared $\ell_2$ norm was added.
-
-    \item The Future Work section was expanded from a short paragraph to a detailed bullet list
-          with three concrete research directions.
-
+      \item The report title was modified to describe the technical approach of the project better. Previously it only mentioned the application domain, but I added the main idea (comparing graph structures) and the methods (FL with synchronous FedGD) to the title.
+      \item All plot numbering from the figures removed and the latex auto-generated plot numbering is now used for referencing figures and plots.
+      \item The feature count was corrected from 7 to 6, more mathematical notation was added where appropriate, and more justification for the use of the $\ell_2$ norm was added.
+      \item The future work section was expanded from a short paragraph into a list of bullet points.
 \end{itemize}
 
 In the following, we respond to each comment point by point.
@@ -63,205 +52,195 @@ numbers in our responses refer to the revised manuscript.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{center}
-    {\bf\large Comments of Reviewer \#1}
-    \vspace{1mm}
+      {\bf\large Comments of Reviewer \#1}
+      \vspace{1mm}
 \end{center}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{enumerate}
 
-    \item[1.1] {\em The report should include the list of FMI station IDs or names used (e.g., as a table or
-          supplementary reference), since the $\geq$80\% completeness filter applied to an undated API call
-          cannot reliably reproduce the exact 50 stations.}
+      \item[1.1] {\em The report should include the list of FMI station IDs or names used (e.g., as a table or
+            supplementary reference), since the $\geq$80\% completeness filter applied to an undated API call
+            cannot reliably reproduce the exact 50 stations.}
 
-          \vspace*{2mm}
-          \begin{itemize}
-              \item The data section (Section 4) was expanded to include the exact WFS stored query name
-                    (\texttt{fmi::observations::weather::hourly::simple}), the bounding box coordinates,
-                    all four variable names, the completeness threshold (80\% of 8\,784 hourly observations),
-                    and the gap-filling rule, so the filtering procedure can be reproduced exactly.
-          \end{itemize}
-          \vspace*{4mm}
+            \vspace*{2mm}
 
-    \item[1.2] {\em There is an inconsistency where figure numbers embedded inside plots (e.g., ``Figure 4'',
-          ``Figure 7'', ``Figure 8'') do not match the caption labels below them (``Fig.\ 2'', ``Fig.\ 5'',
-          ``Fig.\ 6'') --- these should be cleaned up before the final submission.}
+            \begin{itemize}
+                  \item A complete station list was omitted given the 136 stations involved. Instead, the data query description in the numerical experiments section was strengthened with the exact API query, bounding box, variable names, and processing pipeline, so the filtering procedure can be reproduced exactly.
+            \end{itemize}
 
-          \vspace*{2mm}
-          \begin{itemize}
-              \item All in-plot titles were corrected: Fig.\ 2 no longer reads ``Figure 4'',
-                    Fig.\ 5 no longer reads ``Figure 7'', and Fig.\ 6 no longer reads ``Figure 8''.
-                    All in-plot titles are now center-aligned.
-          \end{itemize}
-          \vspace*{4mm}
+            \vspace*{4mm}
 
-    \item[1.3] {\em Some of the texts are overlapping and affect the readability of plots (Fig.\ 6 / Figure 8).
-          Since there are already captions below each figure, the captions inside the plots seem unnecessary
-          and reduce legibility.}
+      \item[1.2] {\em There is an inconsistency where figure numbers embedded inside plots (e.g., ``Figure 4'',
+            ``Figure 7'', ``Figure 8'') do not match the caption labels below them (``Fig.\ 2'', ``Fig.\ 5'',
+            ``Fig.\ 6''): these should be cleaned up before the final submission.}
 
-          \vspace*{2mm}
-          \begin{itemize}
-              \item The redundant in-plot titles were removed from Fig.\ 6.
-                    The figure caption below already conveys the same information.
-          \end{itemize}
-          \vspace*{4mm}
+            \vspace*{2mm}
+            \begin{itemize}
+                  \item All in-plot titles were removed. Now all figures only use the latex autogenerated figure numbering.
+            \end{itemize}
+            \vspace*{4mm}
+
+      \item[1.3] {\em Some of the texts are overlapping and affect the readability of plots (Fig.\ 6 / Figure 8).
+            Since there are already captions below each figure, the captions inside the plots seem unnecessary
+            and reduce legibility.}
+
+            \vspace*{2mm}
+            \begin{itemize}
+                  \item The plot text and titles were simplified so that the caption below each figure conveys the necessary information.
+            \end{itemize}
+            \vspace*{4mm}
 
 \end{enumerate}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{center}
-    {\bf\large Comments of Reviewer \#2}
-    \vspace{1mm}
+      {\bf\large Comments of Reviewer \#2}
+      \vspace{1mm}
 \end{center}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{enumerate}
 
-    \item[2.1] {\em The report discusses the use of 7 features, but it only explains 6:
-          3 lagged wind speeds (t-1, t-2, t-3), 1 lagged atmospheric pressure, 1 lagged temperature,
-          1 lagged humidity.}
+      \item[2.1] {\em The report discusses the use of 7 features, but it only explains 6:
+            3 lagged wind speeds (t-1, t-2, t-3), 1 lagged atmospheric pressure, 1 lagged temperature,
+            1 lagged humidity.}
 
-          \vspace*{2mm}
-          \begin{itemize}
-              \item The feature count was corrected to 6 throughout the manuscript.
-                    The weight vector $\mathbf{w}^{(i)} \in \mathbb{R}^7$ has 7 components because the
-                    feature vector is augmented with a bias term, not because there are 7 features.
-                    This distinction is now made explicit in Section 2.
-          \end{itemize}
-          \vspace*{4mm}
+            \vspace*{2mm}
+            \begin{itemize}
+                  \item The feature count was corrected to 6 throughout the manuscript.
+                        The weight vector $\mathbf{w}^{(i)} \in \mathbb{R}^7$ has 7 components because the
+                        feature vector is augmented with a bias term, not because there are 7 features.
+            \end{itemize}
+            \vspace*{4mm}
 
-    \item[2.2] {\em Feature normalization is repeated unnecessarily in the Problem Formulation section.}
+      \item[2.2] {\em Feature normalization is repeated unnecessarily in the Problem Formulation section.}
 
-          \vspace*{2mm}
-          \begin{itemize}
-              \item The redundant normalization description was removed from the Problem Formulation section.
-                    Feature and label normalization are now described exactly once, in Section 2,
-                    immediately after the feature vector definition.
-          \end{itemize}
-          \vspace*{4mm}
+            \vspace*{2mm}
+            \begin{itemize}
+                  \item The repeated normalization description was removed from the Problem Formulation section.
+                        Feature and label normalization are now described only once, in Section 2.
+            \end{itemize}
+            \vspace*{4mm}
 
-    \item[2.3] {\em GTVMin (and FedGD) is discussed in Section 2 before being explained in Section 3.
-          It is also not cited. The reader should not be assumed to be previously familiar with GTVMin.}
+      \item[2.3] {\em GTVMin (and FedGD) is discussed in Section 2 before being explained in Section 3.
+            It is also not cited. The reader should not be assumed to be previously familiar with GTVMin.}
 
-          \vspace*{2mm}
-          \begin{itemize}
-              \item A forward reference ``(defined in Section~3)'' and a citation to \cite{SarcheshmehPour2023}
-                    were added at the first mention of GTVMin in Section~2.
-                    FedGD is similarly cited at first use.
-          \end{itemize}
-          \vspace*{4mm}
+            \vspace*{2mm}
+            \begin{itemize}
+                  \item A forward reference ``(defined in Section~3)'' and a citation
+                        were added at the first mention of GTVMin in Section~2.
+                        FedGD is also now cited when mentioned the first time.
+            \end{itemize}
+            \vspace*{4mm}
 
-    \item[2.4] {\em For the Geographic k-NN system, the edge weight kernel explanation is a bit unclear:
-          it uses a Gaussian kernel (not mentioned or cited); the report makes it sound like all of
-          Equation~2 is the Haversine distance; the Haversine formula is not shown or cited.}
+      \item[2.4] {\em For the Geographic k-NN system, the edge weight kernel explanation is a bit unclear:
+            it uses a Gaussian kernel (not mentioned or cited); the report makes it sound like all of
+            Equation~2 is the Haversine distance; the Haversine formula is not shown or cited.}
 
-          \vspace*{2mm}
-          \begin{itemize}
-              \item The edge weight formula (Eq.~2) is now explicitly described as a Gaussian kernel.
-              \item The variable $d_{ij}$ in Eq.~2 is now clearly identified as the Haversine distance
-                    between stations $i$ and $j$, so it is clear that the Haversine formula gives $d_{ij}$
-                    and not the full equation.
-              \item A citation to the Haversine formula \cite{Sinnott1984} was added.
-          \end{itemize}
-          \vspace*{4mm}
+            \vspace*{2mm}
+            \begin{itemize}
+                  \item The edge weight formula (Eq.~2) is now described correctly as a Gaussian kernel.
+                  \item The variable $d_{ij}$ in Eq.~2 is now clearly explained as the Haversine distance
+                        between stations $i$ and $j$, so it is clear that the Haversine formula gives $d_{ij}$
+                        and not the full equation.
+                  \item A citation to the Haversine formula was added.
+            \end{itemize}
+            \vspace*{4mm}
 
-    \item[2.5] {\em Some subsections would improve the report's readability.}
+      \item[2.5] {\em Some subsections would improve the report's readability.}
 
-          \vspace*{2mm}
-          \begin{itemize}
-              \item Subsections were not added. The spconf IEEE template is designed for short papers
-                    and does not support subsections well. The report is already at the page limit,
-                    so adding subsection headers would require removing content.
-          \end{itemize}
-          \vspace*{4mm}
+            \vspace*{2mm}
+            \begin{itemize}
+                  \item Subsections were not added. The spconf IEEE template is a well recognized
+                        template and custom subsections might actually hurt readability if readers
+                        are expecting a certain template structure.
+            \end{itemize}
+            \vspace*{4mm}
 
-    \item[2.6] {\em The figures have inconsistent number labeling in their titles and in the report.}
+      \item[2.6] {\em The figures have inconsistent number labeling in their titles and in the report.}
 
-          \vspace*{2mm}
-          \begin{itemize}
-              \item All in-plot figure numbers were corrected to match their caption labels,
-                    as described in our response to comment~1.2.
-          \end{itemize}
-          \vspace*{4mm}
+            \vspace*{2mm}
+            \begin{itemize}
+                  \item All in-plot figure numbering removed.
+            \end{itemize}
+            \vspace*{4mm}
 
 \end{enumerate}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{center}
-    {\bf\large Comments of Teaching Assistant (Alexander Pavlyuk)}
-    \vspace{1mm}
+      {\bf\large Comments of Teaching Assistant (Alexander Pavlyuk)}
+      \vspace{1mm}
 \end{center}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{enumerate}
 
-    \item[TA.1] {\em Criterion 1: The title is not informative. Please indicate (i) the main idea (comparing
-          graph structures), (ii) the application domain (wind prediction), and (iii) the methods
-          (FL, Synchronous FedGD).}
+      \item[TA.1] {\em Criterion 1: The title is not informative. Please indicate (i) the main idea (comparing
+            graph structures), (ii) the application domain (wind prediction), and (iii) the methods
+            (FL, Synchronous FedGD).}
 
-          \vspace*{2mm}
-          \begin{itemize}
-              \item The title was changed to ``Federated Wind Speed Forecasting in Finland:
-                    Geographic vs.\ Correlation Graphs with Synchronous FedGD''.
-                    It now conveys (i) the comparison of graph structures (Geographic vs.\ Correlation Graphs),
-                    (ii) the application domain (wind speed forecasting in Finland), and
-                    (iii) the method (Synchronous FedGD).
-          \end{itemize}
-          \vspace*{4mm}
+            \vspace*{2mm}
+            \begin{itemize}
+                  \item The title was changed to ``Federated Wind Speed Forecasting in Finland:
+                        Geographic vs.\ Correlation Graphs with Synchronous FedGD''.
+                        It now conveys (i) the comparison of graph structures (Geographic vs.\ Correlation Graphs),
+                        (ii) the application domain (wind speed forecasting in Finland), and
+                        (iii) the method (Synchronous FedGD).
+            \end{itemize}
+            \vspace*{4mm}
 
-    \item[TA.2] {\em Criterion 6: The label was not explicitly defined. Mathematical notation should be added
-          to improve readability.}
+      \item[TA.2] {\em Criterion 6: The label was not explicitly defined. Mathematical notation should be added
+            to improve readability.}
 
-          \vspace*{2mm}
-          \begin{itemize}
-              \item The prediction label is now formally defined as $y^{(i)}_t = ws^{(i)}_{t+1}$
-                    (next-hour wind speed at station $i$) at the start of Section~2.
-              \item The full feature vector is now written out as a math expression with all six
-                    components named and their physical units stated.
-          \end{itemize}
-          \vspace*{4mm}
+            \vspace*{2mm}
+            \begin{itemize}
+                  \item The prediction label is now formally defined as $y^{(i)}_t = ws^{(i)}_{t+1}$
+                        (next-hour wind speed at station $i$) at the start of Section~2.
+                  \item The full feature vector is now written out as a math expression with all six
+                        components named and their physical units stated.
+            \end{itemize}
+            \vspace*{4mm}
 
-    \item[TA.3] {\em Criterion 9: More arguments in favor of the squared $\ell_2$ norm can be made.}
+      \item[TA.3] {\em Criterion 9: More arguments in favor of the squared $\ell_2$ norm can be made.}
 
-          \vspace*{2mm}
-          \begin{itemize}
-              \item Three explicit arguments for the squared $\ell_2$ norm were added in Section~3:
-                    (1) it is smooth and differentiable everywhere, giving a closed-form gradient
-                    that pairs directly with the FedGD update rule;
-                    (2) it penalizes large parameter disagreements quadratically, encouraging
-                    tight agreement between neighbors rather than merely bounded spread;
-                    (3) adding a strictly convex penalty to the sum of convex local losses makes
-                    the full GTVMin objective strongly convex for $\alpha > 0$, guaranteeing a
-                    unique global minimizer.
-          \end{itemize}
-          \vspace*{4mm}
+            \vspace*{2mm}
+            \begin{itemize}
+                  \item Two more arguments for the squared $\ell_2$ norm were added in Section 3:
+                        \begin{enumerate}
+                              \item it penalizes large parameter disagreements quadratically, encouraging
+                                    more agreement between neighbors
+                              \item adding a strictly convex penalty to the sum of convex local losses makes
+                                    the full GTVMin objective strongly convex for $\alpha > 0$, guaranteeing a
+                                    unique global minimizer
+                        \end{enumerate}
+            \end{itemize}
+            \vspace*{4mm}
 
-    \item[TA.4] {\em Criterion 14: Figure title/numbering issues; y-axis label out of bounds on Figure 3;
-          in-plot title overlaps; station coordinates used instead of names.}
+      \item[TA.4] {\em Criterion 14: Figure title/numbering issues; y-axis label out of bounds on Figure 3;
+            in-plot title overlaps; station coordinates used instead of names.}
 
-          \vspace*{2mm}
-          \begin{itemize}
-              \item All in-plot figure numbers were corrected to match their caption labels,
-                    as described in our response to comment~1.2.
-              \item The y-axis label that was clipped out of bounds on Fig.~3 was repositioned.
-              \item Station coordinates used to label the best and worst performing stations
-                    were replaced with their FMI station names for readability.
-          \end{itemize}
-          \vspace*{4mm}
+            \vspace*{2mm}
+            \begin{itemize}
+                  \item All in-plot figure numbers were removed and now the report only relies on latex automatic figure numbering
+                  \item The y-axis label that was clipped out of bounds on Fig.~3 was moved to be in frame.
+                  \item Station coordinates used to label the best and worst performing stations
+                        were replaced with their FMI station names for readability.
+            \end{itemize}
+            \vspace*{4mm}
 
-    \item[TA.5] {\em Criterion 16: I strongly suggest including more detailed potential improvements
-          and presenting them in a list.}
+      \item[TA.5] {\em Criterion 16: I strongly suggest including more detailed potential improvements
+            and presenting them in a list.}
 
-          \vspace*{2mm}
-          \begin{itemize}
-              \item The Future Work section was rewritten from a short paragraph into a bullet list
-                    with three concrete directions: (1) more expressive local models (MLP, LSTM),
-                    (2) sparser data regimes where graph regularization provides more benefit, and
-                    (3) a wind-flow-aware directed graph based on prevailing wind directions.
-          \end{itemize}
-          \vspace*{4mm}
+            \vspace*{2mm}
+            \begin{itemize}
+                  \item The future directions were rewritten from a short paragraph into a bullet list.
+                  \item The future directions contain reasons why the directions would strengthen the understanding of the application.
+            \end{itemize}
+            \vspace*{4mm}
 
 \end{enumerate}
 
