@@ -26,6 +26,10 @@ dependencies = [
     # Interactive figures + static export (figures/)
     "plotly==6.8.0",
     "kaleido==0.2.1",
+    # pandas .style in notebooks/report.qmd; missing from the course's requirements.txt
+    "jinja2==3.1.6",
+    # imported by Quarto's Jupyter runner when rendering the notebook
+    "pyyaml==6.0.3",
 ]
 
 [tool.uv]
