@@ -1,0 +1,34 @@
+[project]
+name = "federated-wind-forecasting"
+version = "1.0.0"
+description = "Graph-regularized federated learning over Finnish weather stations (FMI wind-speed forecasting)"
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [{ name = "Andreas Bogossian" }]
+
+# Direct (top-level) dependencies only, at the versions the course project ran on.
+# The full transitive closure is pinned in uv.lock.
+dependencies = [
+    # Scientific core (src/: data, graph, fedgd, experiments)
+    "numpy==2.3.4",
+    "scipy==1.17.1",
+    "pandas==3.0.1",
+    "scikit-learn==1.7.2",
+    "matplotlib==3.10.7",
+    "networkx==3.5",
+    # FMI WFS API fetching (src/data.py)
+    "requests==2.33.0",
+    # Jupyter kernel execution for the {python} cells of notebooks/report.qmd
+    "ipykernel==7.2.0",
+    "ipython==9.12.0",
+    "nbclient==0.10.4",
+    "nbformat==5.10.4",
+    # Interactive figures + static export (figures/)
+    "plotly==6.8.0",
+    "kaleido==0.2.1",
+]
+
+[tool.uv]
+# Flat scripts (src/ is used via sys.path, not installed as a package), so manage
+# dependencies only; do not build/install this project itself.
+package = false
